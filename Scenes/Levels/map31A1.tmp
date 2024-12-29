@@ -1,0 +1,27 @@
+[gd_scene load_steps=5 format=3 uid="uid://d213ekm8t7n6e"]
+
+[ext_resource type="PackedScene" uid="uid://d4i3yiownurkd" path="res://Scenes/Characters/knight.tscn" id="1_7uf3o"]
+[ext_resource type="PackedScene" uid="uid://rt0dgveoxbb5" path="res://assets/dungeon/wall.gltf" id="3_bw3kt"]
+[ext_resource type="PackedScene" uid="uid://dm6uihhq1ocrg" path="res://wall.tscn" id="4_6jy0b"]
+[ext_resource type="PackedScene" uid="uid://cvfoh88o61uyy" path="res://Scenes/Characters/knight_no_camera.tscn" id="4_kv2al"]
+
+[node name="map1" type="Node3D"]
+
+[node name="map" type="Node3D" parent="."]
+
+[node name="floor" type="CSGBox3D" parent="map"]
+transform = Transform3D(256.926, 0, 0, 0, 0.756512, 0, 0, 0, 516.49, 0, -1, 0)
+use_collision = true
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.68646, 0)
+
+[node name="wall" parent="." instance=ExtResource("3_bw3kt")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.42277, -0.621744, 7.7638)
+
+[node name="wall2" parent="." instance=ExtResource("4_6jy0b")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.42277, -0.621744, 13.6267)
+
+[node name="Knight" parent="." instance=ExtResource("1_7uf3o")]
+
+[node name="Knight2" parent="." instance=ExtResource("4_kv2al")]
