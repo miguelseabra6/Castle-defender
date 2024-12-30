@@ -26,6 +26,8 @@ var attacks = [
 	
 var leader_knight = null
 @export var is_leader = false
+
+var is_attacking = false 
 signal changed
 signal changed_other
 
@@ -38,11 +40,20 @@ func _ready():
 		
 	else:
 		spring_arm = $SpringArm3D
+	anim_tree.set("parameters/Block/playback_speed", -1.0)
 
 var block_animation = "Block"
 var blocking_animation = "Blocking"
-var reverse_block_animation = "Block"
+var reverse_block_animation = "Block 2"
 
+
+@warning_ignore("shadowed_variable")
+func get_attack_duration(attack: String) -> float:
+	# Define durations for each attack type
+	match attack:
+		"1h_melee_chop": return 1.0667
+		"1H_Melee_Attack_Slice_Diagonal": return 1
+		_: return 1
 var is_blocking = false			
 func _unhandled_input(event):
 	if is_leader:
@@ -55,9 +66,13 @@ func _unhandled_input(event):
 			changed_other.emit()
 			_on_knight_changed()
 	if event.is_action_pressed("attack"):
+		is_attacking = true
 		var random_attack = attacks.pick_random()
 		state_machine.travel(random_attack)
-	#if event.is_action_pressed("block"):  # "block" action should be mapped to the right mouse button
+	
+	if event.is_action_pressed("block"):
+		print("a")
+		$AnimationPlayer.play_backwards(block_animation)
 		#if not is_blocking:
 			## Start blocking (Play the 'Block' animation once)
 			#state_machine.travel(block_animation)
@@ -195,3 +210,18 @@ func _on_knight_changed_other() -> void:
 		if child is Knight and child.is_leader:
 			leader_knight = child
 			spring_arm = child.get_node("SpringArm3D")
+			
+
+
+signal hurt(int)
+var damage_amount = 5
+func attack():
+	print("attack")
+	
+func _on_sword_area_entered(body : Area3D) -> void:
+
+	print("Body type: ", body.get_class())  # Prints the class of the body
+	print("Is in group? ", body.is_in_group("hurt_boxes"))
+	#print("is attacking: " , is_attacking)
+	if body.is_in_group("hurt_boxes"):
+		hurt.emit(5)
