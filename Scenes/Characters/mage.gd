@@ -1,6 +1,8 @@
 extends CharacterBody3D
 class_name Mage
 
+@export var spell_scene : PackedScene
+
 @export var speed = 6.0
 @export var acceleration = 4.0
 @export var jump_speed = 8.0
@@ -27,21 +29,33 @@ var attacks = [
 var leader_knight = null
 @export var is_leader = false
 
-var is_attacking = false 
+var is_attacking = false
 signal changed
 signal changed_other
-
+var player_units = null
+var self_index = self.get_index()
 func _ready():
+	player_units = get_parent().get_children()
+	
+	
 	if not is_leader:
 		for child in get_parent().get_children():
-			if child is Knight and child.is_leader:
+			if child.is_leader:
 				leader_knight = child
 				spring_arm = child.get_node("SpringArm3D")
+				ray_cast  = child.get_node("SpringArm3D/Camera3D/RayCast3D")
 		
 	else:
 		spring_arm = $SpringArm3D
 	anim_tree.set("parameters/Block/playback_speed", -1.0)
+	
+	for child in player_units:
 
+		if child != self and child.get_index() == self.get_index() - 1 :
+			print(self.get_index())
+			child.changed.connect(_on_changed)
+		if child != self and child.get_index() != self.get_index() - 1 :
+			child.changed_other.connect(_on_changed_other)
 var block_animation = "Block"
 var blocking_animation = "Blocking"
 var reverse_block_animation = "Block 2"
@@ -54,7 +68,12 @@ func get_attack_duration(attack: String) -> float:
 		"1h_melee_chop": return 1.0667
 		"1H_Melee_Attack_Slice_Diagonal": return 1
 		_: return 1
-var is_blocking = false			
+var is_blocking = false
+
+signal hit
+@onready var camera = $SpringArm3D/Camera3D
+@onready var ray_cast = $SpringArm3D/Camera3D/RayCast3D
+@export var bullet_speed = 50.0
 func _unhandled_input(event):
 	if is_leader:
 		if event is InputEventMouseMotion:
@@ -64,12 +83,64 @@ func _unhandled_input(event):
 		if event.is_action_pressed("change"):
 			changed.emit()
 			changed_other.emit()
-			_on_knight_changed()
+			_on_changed()
 	if event.is_action_pressed("attack"):
-		is_attacking = true
-		var random_attack = attacks.pick_random()
-		state_machine.travel(random_attack)
+		print(self.get_signal_connection_list("changed"))
+		var new_spell :  = spell_scene.instantiate()
+		var particles = GPUParticles3D.new()
+
 	
+
+		# Create and configure the process material
+		var particle_material = ParticleProcessMaterial.new()
+		particle_material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE  # Set emission shape
+		particle_material.emission_sphere_radius = 0.5  # Set sphere radius if needed
+		particle_material.color = Color(0, 0.5, 1, 1)  # Set the particle color
+		
+
+		# Assign the material to the particles
+		particles.process_material = particle_material
+
+		# Add the particles as a child of the spell
+		new_spell.add_child(particles)
+
+		# Start emitting
+
+
+
+		owner.add_child(new_spell)
+		new_spell.global_position = global_position + Vector3(0, 1.5, 1)  # Offset to spawn in front of the camera
+	  
+	# Get the forward direction of the camera
+
+		ray_cast.target_position = Vector3(0, 0, 100)
+		if ray_cast.is_colliding():
+	# Get the collision point
+			var collision_point = ray_cast.get_collision_point()
+			print("Raycast hit at: ", collision_point)
+
+	# Get the object that was hit
+			var hit_object = ray_cast.get_collider()
+			print("Raycast hit object: ", hit_object)
+
+	# Set the spell's movement direction toward the collision point
+			var direction = (collision_point - new_spell.global_position).normalized()
+			new_spell.set("direction", direction)  # Pass the direction to the spell
+		else:
+		# Get the direction the spring_arm is pointing
+			var direction = -spring_arm.global_transform.basis.z.normalized()
+
+		# Calculate the target position 50 meters away in the direction of the spring_arm
+			var target_position = spring_arm.global_position + (direction * 50)
+
+		# Calculate a direction vector from the spell's position to the target position
+			var adjusted_direction = (target_position - new_spell.global_position).normalized()
+			new_spell.set("direction", adjusted_direction)  # Pass the direction to the spell
+
+			print("Raycast did not hit anything")
+		
+		
+		
 	if event.is_action_pressed("block"):
 		print("a")
 		$AnimationPlayer.play_backwards(block_animation)
@@ -124,10 +195,10 @@ func follow_leader(delta):
 		
 		# Separation logic: Adjust direction to avoid nearby followers
 		var separation_force = Vector3.ZERO
-		var min_distance = 3.0  # Minimum distance to maintain from other followers
+		var min_distance = 4.0  # Minimum distance to maintain from other followers
 		
 		for child in get_parent().get_children():
-			if child != self and child is Knight:
+			if child != self:
 				var to_other = global_transform.origin - child.global_transform.origin
 				var distance = to_other.length()
 				
@@ -142,8 +213,8 @@ func follow_leader(delta):
 		
 		# Update velocity while preserving gravity
 	# Update velocity while preserving gravity
-		var distance_threshold = 3.5  # Distance to start slowing down
-		var stopping_distance = 2.0   # Distance at which to fully stop
+		var distance_threshold = 6.5  # Distance to start slowing down
+		var stopping_distance = 6.0   # Distance at which to fully stop
 		
 
 		# Calculate a smooth factor based on the distance to the leader
@@ -187,13 +258,14 @@ func _physics_process(delta):
 
 
 
-func _on_knight_changed() -> void:
+func _on_changed() -> void:
 	if is_leader:
 		is_leader = false
 		for child in get_parent().get_children():
-			if child is Knight and child.is_leader:
+			if child.is_leader:
 				leader_knight = child
 				spring_arm = child.get_node("SpringArm3D")
+				ray_cast  = child.get_node("SpringArm3D/Camera3D/RayCast3D")
 				
 				# Reparent the camera to the new leader's SpringArm3D
 		
@@ -205,9 +277,9 @@ func _on_knight_changed() -> void:
 			
 
 
-func _on_knight_changed_other() -> void:
+func _on_changed_other() -> void:
 	for child in get_parent().get_children():
-		if child is Knight and child.is_leader:
+		if child.is_leader:
 			leader_knight = child
 			spring_arm = child.get_node("SpringArm3D")
 			

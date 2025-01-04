@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3 uid="uid://causr24pccrfm"]
+
+[ext_resource type="Texture2D" uid="uid://ds1y7ha6joqjx" path="res://assets/crosshair.png" id="1_p2doo"]
+
+[node name="Crosshair" type="CanvasLayer"]
+
+[node name="TextureRect" type="TextureRect" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -7.0
+offset_top = -7.0
+offset_right = 137.0
+offset_bottom = 137.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.2, 0.2)
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("1_p2doo")

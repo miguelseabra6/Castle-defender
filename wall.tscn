@@ -5,6 +5,8 @@
 [sub_resource type="BoxShape3D" id="BoxShape3D_fu7vd"]
 
 [node name="wall" type="StaticBody3D"]
+collision_layer = 3
+collision_mask = 3
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(3.901, 0, 0, 0, 3.77879, 0, 0, 0, 0.887787, 0, 1.90961, -0.218709)

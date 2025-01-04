@@ -31,21 +31,39 @@ var is_attacking = false
 signal changed
 signal changed_other
 
+var player_units = null
+var self_index = self.get_index()
+
 func _ready():
+	player_units = get_parent().get_children()
+	
+	
 	if not is_leader:
 		for child in get_parent().get_children():
-			if child is Knight and child.is_leader:
+			if child.is_leader:
 				leader_knight = child
 				spring_arm = child.get_node("SpringArm3D")
 		
 	else:
 		spring_arm = $SpringArm3D
 	anim_tree.set("parameters/Block/playback_speed", -1.0)
+	
+	for child in player_units:
+
+		if child != self and child.get_index() == self.get_index() - 1 :
+			print(self.get_index())
+			child.changed.connect(_on_changed)
+		if child != self and child.get_index() != self.get_index() - 1 :
+			child.changed_other.connect(_on_changed_other)
+
 
 var block_animation = "Block"
 var blocking_animation = "Blocking"
 var reverse_block_animation = "Block 2"
 
+# Custom comparison function to sort by the scene tree index
+func _compare_by_index(a, b):
+	return a.get_index() - b.get_index()
 
 @warning_ignore("shadowed_variable")
 func get_attack_duration(attack: String) -> float:
@@ -64,7 +82,7 @@ func _unhandled_input(event):
 		if event.is_action_pressed("change"):
 			changed.emit()
 			changed_other.emit()
-			_on_knight_changed()
+			_on_changed()
 	if event.is_action_pressed("attack"):
 		is_attacking = true
 		var random_attack = attacks.pick_random()
@@ -127,7 +145,7 @@ func follow_leader(delta):
 		var min_distance = 3.0  # Minimum distance to maintain from other followers
 		
 		for child in get_parent().get_children():
-			if child != self and child is Knight:
+			if child != self:
 				var to_other = global_transform.origin - child.global_transform.origin
 				var distance = to_other.length()
 				
@@ -143,7 +161,7 @@ func follow_leader(delta):
 		# Update velocity while preserving gravity
 	# Update velocity while preserving gravity
 		var distance_threshold = 3.5  # Distance to start slowing down
-		var stopping_distance = 2.0   # Distance at which to fully stop
+		var stopping_distance = 6.0   # Distance at which to fully stop
 		
 
 		# Calculate a smooth factor based on the distance to the leader
@@ -187,11 +205,11 @@ func _physics_process(delta):
 
 
 
-func _on_knight_changed() -> void:
+func _on_changed() -> void:
 	if is_leader:
 		is_leader = false
 		for child in get_parent().get_children():
-			if child is Knight and child.is_leader:
+			if child.is_leader:
 				leader_knight = child
 				spring_arm = child.get_node("SpringArm3D")
 				
@@ -205,9 +223,9 @@ func _on_knight_changed() -> void:
 			
 
 
-func _on_knight_changed_other() -> void:
+func _on_changed_other() -> void:
 	for child in get_parent().get_children():
-		if child is Knight and child.is_leader:
+		if child.is_leader:
 			leader_knight = child
 			spring_arm = child.get_node("SpringArm3D")
 			

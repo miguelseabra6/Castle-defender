@@ -21,7 +21,11 @@ PhantomCameraManager="*res://addons/phantom_camera/scripts/managers/phantom_came
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/phantom_camera/plugin.cfg")
+enabled=PackedStringArray()
+
+[filesystem]
+
+import/blender/enabled=false
 
 [input]
 

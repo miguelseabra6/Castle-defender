@@ -57,7 +57,7 @@ func _physics_process(delta):
 
 
 var i = 0
-func _on_knight_hurt(damage: Variant) -> void:
+func _on_knight_hurt(damage: int) -> void:
 	print(damage)
 	i = i+ 1
 	print(i)
