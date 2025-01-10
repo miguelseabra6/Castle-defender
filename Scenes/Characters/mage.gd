@@ -1,7 +1,7 @@
 extends CharacterBody3D
 class_name Mage
 
-@export var spell_scene : PackedScene
+@export var spell_scene : PackedScene  = ResourceLoader.load("res://Scenes/Utils/spell.tscn")
 
 @export var speed = 6.0
 @export var acceleration = 4.0
@@ -47,27 +47,53 @@ func _ready():
 		
 	else:
 		spring_arm = $SpringArm3D
+		spring_arm.get_node("Camera3D").make_current()
 	anim_tree.set("parameters/Block/playback_speed", -1.0)
 	
 	var max_index = -1
 	
-	for child in player_units:
+	for child in get_parent().get_children():
 		if child.get_index() > max_index:
 			max_index = child.get_index()
 	
-	if self.get_index() == 0:
-		player_units[max_index].changed.connect(_on_changed)
+	
 		
-	for child in player_units:
+	for child in get_parent().get_children():
+		
+		if self.get_index() != max_index:	
+			if child != self and child.get_index() == self.get_index() + 1 :
+					changed.connect(child._on_changed)
+					
+			if child != self and child.get_index() != self.get_index() + 1 :
+					changed_other.connect(child._on_changed_other)
+		else:
+			if child.get_index() == 0:
+				changed.connect(child._on_changed)
+			if child != self and child.get_index() != 0:
+					changed_other.connect(child._on_changed_other)
 
-		if child != self and child.get_index() == self.get_index() - 1 :
-			print(self.get_index())
-			child.changed.connect(_on_changed)
-		if child != self and child.get_index() != self.get_index() - 1 :
-			child.changed_other.connect(_on_changed_other)
-		
-			
-			
+
+
+
+func _input(delta):
+
+	if is_leader:
+		if Input.is_action_just_pressed("change"):
+				print(self.get_index())
+				print(is_leader)
+				print(self.get_index(), "pressed change")
+				changed.emit()  # Emit the knight's unique ID
+				is_leader = false
+				changed_other.emit()
+				is_leader = false
+				
+				for child in get_parent().get_children():
+					if child.is_leader:
+						leader_knight = child
+						spring_arm = child.get_node("SpringArm3D")
+						spring_arm.get_node("Camera3D").make_current()
+						ray_cast = child.get_node("SpringArm3D/Camera3D/RayCast3D")
+
 var block_animation = "Block"
 var blocking_animation = "Blocking"
 var reverse_block_animation = "Block 2"
@@ -86,37 +112,17 @@ signal hit
 @onready var camera = $SpringArm3D/Camera3D
 @onready var ray_cast = $SpringArm3D/Camera3D/RayCast3D
 @export var bullet_speed = 50.0
+@export var min_length: float = 2.0  # Minimum zoom distance
+@export var max_length: float = 50.0  # Maximum zoom distance
 func _unhandled_input(event):
 	if is_leader:
 		if event is InputEventMouseMotion:
 			spring_arm.rotation.x -= event.relative.y * mouse_sensitivity
 			spring_arm.rotation_degrees.x = clamp(spring_arm.rotation_degrees.x, -90.0, 30.0)
 			spring_arm.rotation.y -= event.relative.x * mouse_sensitivity
-		if event.is_action_pressed("change"):
-			changed.emit()
-			changed_other.emit()
-			_on_changed()
 		if event.is_action_pressed("attack"):
-			print(self.get_signal_connection_list("changed"))
+	
 			var new_spell :  = spell_scene.instantiate()
-			var particles = GPUParticles3D.new()
-
-		
-
-			# Create and configure the process material
-			var particle_material = ParticleProcessMaterial.new()
-			particle_material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE  # Set emission shape
-			particle_material.emission_sphere_radius = 0.5  # Set sphere radius if needed
-			particle_material.color = Color(0, 0.5, 1, 1)  # Set the particle color
-			
-
-			# Assign the material to the particles
-			particles.process_material = particle_material
-
-			# Add the particles as a child of the spell
-			new_spell.add_child(particles)
-
-			# Start emitting
 
 
 
@@ -129,11 +135,11 @@ func _unhandled_input(event):
 			if ray_cast.is_colliding():
 		# Get the collision point
 				var collision_point = ray_cast.get_collision_point()
-				print("Raycast hit at: ", collision_point)
+
 
 		# Get the object that was hit
 				var hit_object = ray_cast.get_collider()
-				print("Raycast hit object: ", hit_object)
+
 
 		# Set the spell's movement direction toward the collision point
 				var direction = (collision_point - new_spell.global_position).normalized()
@@ -149,12 +155,16 @@ func _unhandled_input(event):
 				var adjusted_direction = (target_position - new_spell.global_position).normalized()
 				new_spell.set("direction", adjusted_direction)  # Pass the direction to the spell
 
-				print("Raycast did not hit anything")
-			
+				
+		if event.is_action_pressed("zoom_in"):
+			spring_arm.spring_length = clamp(spring_arm.spring_length - 1, min_length, max_length)
+
+		elif event.is_action_pressed("zoom_out"):
+			spring_arm.spring_length = clamp(spring_arm.spring_length + 1, min_length, max_length)
+
 			
 			
 		if event.is_action_pressed("block"):
-			print("a")
 			$AnimationPlayer.play_backwards(block_animation)
 		#if not is_blocking:
 			## Start blocking (Play the 'Block' animation once)
@@ -170,7 +180,7 @@ func _unhandled_input(event):
 
 func get_move_input(delta):
 	var vy = velocity.y
-	velocity.y = 0
+
 	var input = Input.get_vector("left", "right","forward","backwards")
 	var dir = Vector3(input.x, 0, input.y).rotated(Vector3.UP, spring_arm.rotation.y)
 	velocity = lerp(velocity, dir * speed, acceleration * delta)
@@ -289,60 +299,75 @@ func get_move_input(delta):
 #
 		#model.rotation.y = lerp_angle(current_rotation_y, target_rotation_y, rotation_speed * delta)
 
-
+func get_leader_rotation():
+	if leader_knight.velocity.length() > 0:
+		var direction = leader_knight.velocity.normalized()
+		var rotation_y = atan2(direction.x, direction.z)
+		return Vector3(0, rad_to_deg(rotation_y), 0)
+	return leader_knight.get_rotation_degrees()
+	
 func follow_leader(delta):
-	if leader_knight:
-		var knights = []
-		var mages = []
+	var knights = []
+	for child in get_parent().get_children():
+		if child is Knight:
+			knights.append(child)
 
-		# Separate knights and mages
-		for child in get_parent().get_children():
-			if child is Knight:
-				knights.append(child)
-			elif child is Mage:
-				mages.append(child)
 
-		# Get the leader's movement direction
-		var leader_direction = -leader_knight.velocity.normalized()
-		
-		# Mage formation settings
-		var knights_per_row = 3
-		var row_spacing = 3.0
-		var column_spacing = 2.0
+	if knights.size() > 0:
+		# Calculate the center point of all knights
+		var average_position = Vector3.ZERO
+		var average_direction = Vector3.ZERO
 
-		# Get this mage's position in the formation
-		var index = mages.find(self)
-		var row = index / knights_per_row
-		var column = index % knights_per_row
+		for knight in knights:
+			average_position += knight.global_transform.origin
+			var knight_rotation_y = knight.model.rotation.y
+			average_direction += Vector3(sin(knight_rotation_y), 0, cos(knight_rotation_y)).normalized()
 
-		# Calculate the mage's target position behind the knights
-		var leader_pos = leader_knight.global_transform.origin
-		var target_position = leader_pos
-		target_position += leader_direction * (row + knights.size() / knights_per_row + 2) * row_spacing
-		target_position += leader_knight.global_transform.basis.x * (column - (knights_per_row / 2.0)) * column_spacing
+		average_position /= knights.size()
+		average_direction = average_direction.normalized()
 
-		# Calculate the movement direction
-		var move_direction = (target_position - global_transform.origin).normalized()
-		var distance_to_target = global_transform.origin.distance_to(target_position)
+		# Only follow if the group is moving
+		var is_group_moving = leader_knight.velocity.length() > 1.0
 
-		# Slow down as the mage gets closer to its target position
-		var slow_factor = clamp(distance_to_target / row_spacing, 0.0, 1.0)
-		velocity.x = move_direction.x * speed * slow_factor
-		velocity.z = move_direction.z * speed * slow_factor
-		if leader_knight.velocity.length() == 0:
+		if is_group_moving:
+			# Formation settings
+			var row_spacing = 2.5
+			var column_spacing = 2.5
+
+			# Get this mage's position in the formation
+			var index = get_parent().get_children().find(self)
+			var row = index / 3
+			var column = index % 3
+
+			# Calculate the target position behind the group of knights
+			var target_position = average_position
+			target_position -= average_direction * (row + 1) * row_spacing  # Move rows back
+			target_position += Vector3(-average_direction.z, 0, average_direction.x) * (column - 1.5) * column_spacing  # Spread columns sideways
+
+			# Move toward the target position
+			var move_direction = (target_position - global_transform.origin).normalized()
+			var distance_to_target = global_transform.origin.distance_to(target_position)
+			var slow_factor = clamp(distance_to_target / row_spacing, 0.0, 1.0)
+
+			velocity.x = move_direction.x * speed * slow_factor
+			velocity.z = move_direction.z * speed * slow_factor
+
+			# Smoothly rotate toward the movement direction
+			if velocity.length() > 1.0:
+		  # Get the forward direction of the leader's model
+				var leader_forward = leader_knight.model.global_transform.basis.z.normalized()
+
+		# Smoothly rotate the follower to align with the leader's forward direction
+				var current_forward = model.global_transform.basis.z.normalized()  # Forward vector of the follower model
+				var target_rotation_y = atan2(leader_forward.x, leader_forward.z)  # Target rotation based on leader's forward
+				var current_rotation_y = atan2(current_forward.x, current_forward.z)  # Current rotation
+
+				model.rotation.y = lerp_angle(current_rotation_y, target_rotation_y, rotation_speed * delta)
+		else:
 			velocity.x = 0
 			velocity.z = 0
-		# Update animation tree
-		var vl = velocity * model.transform.basis
-		anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
-
-		# Smoothly rotate toward the movement direction
-		if velocity.length() > 1.0:
-			var target_rotation_y = atan2(move_direction.x, move_direction.z)
-			model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, rotation_speed * delta)
-
-		move_and_slide()
-
+	var vl = velocity * model.transform.basis
+	anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
 
 
 
@@ -365,23 +390,13 @@ func _physics_process(delta):
 
 
 func _on_changed() -> void:
-	if is_leader:
-		is_leader = false
-		for child in get_parent().get_children():
-			if child.is_leader:
-				leader_knight = child
-				spring_arm = child.get_node("SpringArm3D")
-				ray_cast = child.get_node("SpringArm3D/Camera3D/RayCast3D")
-				
-				# Reparent the camera to the new leader's SpringArm3D
-		
-	else:
+
 		is_leader = true
 		spring_arm = $SpringArm3D
 		$SpringArm3D/Camera3D.make_current()
 		ray_cast = get_node("SpringArm3D/Camera3D/RayCast3D")
 		
-			
+
 
 
 func _on_changed_other() -> void:
@@ -390,12 +405,44 @@ func _on_changed_other() -> void:
 			leader_knight = child
 			spring_arm = child.get_node("SpringArm3D")
 			ray_cast = child.get_node("SpringArm3D/Camera3D/RayCast3D")
+	
+	is_leader= false
+	
+
+
+func reset_connections():
+	
+	
+	player_units = get_parent().get_children()
+	var max_index = -1
+	
+	for child in player_units:
+		if child.get_index() > max_index:
+			max_index = child.get_index()
+	
+
+	for child in player_units:
+		# Disconnect all connections to 'changed'
+		for connection in child.get_signal_connection_list("changed"):
+			child.changed.disconnect(_on_changed)
+		# Disconnect all connections to 'changed_other'
+		for connection in child.get_signal_connection_list("changed_other"):
+			child.changed_other.disconnect(_on_changed_other)
+
+
+	for child in player_units:
+		if child != self and child.get_index() == self.get_index() - 1 :
+			child.changed.connect(_on_changed)
+		if child != self and child.get_index() != self.get_index() - 1 :
+			child.changed_other.connect(_on_changed_other)
+	
+	if self.get_index() == 0:
+		player_units[max_index].changed.connect(_on_changed)
 
 
 signal hurt(int)
 var damage_amount = 5
-func attack():
-	print("attack")
+
 	
 func _on_sword_area_entered(body : Area3D) -> void:
 

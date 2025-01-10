@@ -1,10 +1,11 @@
 extends CharacterBody3D
-class_name Enemy
+class_name Enemy_Knight
 
 @export var speed = 3.5
 @export var acceleration = 2.0
-@export var area_min = Vector3(-5, 0, -5)  # Minimum corner of the walking area
-@export var area_max = Vector3(0, 0, 0)   # Maximum corner of the walking 
+@onready var spawn = global_position
+@onready var area_min = spawn + Vector3(-5, 0, -5)  # Minimum corner of the walking area
+@onready var area_max = spawn + Vector3(0, 0, 0)   # Maximum corner of the walking 
 @export var change_direction_interval = 2.0  # How often to change direction (in seconds)
 @export var idle_chance = 0.3  # Chance to idle when changing direction (0.0 to 1.0)
 @export var detection_range = 5.0 
@@ -20,9 +21,15 @@ var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 @onready var helmet = get_node("Rig/Skeleton3D/Knight_Helmet/Knight_Helmet")
 
+signal died
 func _ready():
 	direction = get_random_direction()
 	
+	var player_units = get_parent().get_parent().get_node("Player Units").get_children()
+	#for child in player_units:
+		#if child.is_leader:
+			#died.connect(child.spawn_knight)
+			#
 	var material = helmet.get_surface_override_material(0)  # Get the first material
 	if not material:
 		material = StandardMaterial3D.new()
@@ -121,7 +128,7 @@ func _on_attack_finished():
 	is_attacking = false
 
 var i = 0
-func _on_knight_hurt(damage: int) -> void:
+func _on_hurt(damage: int) -> void:
 	$Health.take_damage(damage)
 	i = i+ 1
 	print(i)
@@ -137,6 +144,8 @@ func _on_health_died() -> void:
 	add_child(timer)
 	timer.start()
 	state_machine.travel("Death_A")
+	
 
 func _on_death_timer_finished() -> void:
 	queue_free()
+	died.emit()

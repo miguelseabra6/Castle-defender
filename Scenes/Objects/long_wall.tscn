@@ -1,0 +1,30 @@
+[gd_scene load_steps=2 format=3 uid="uid://7bn5yfh63556"]
+
+[ext_resource type="PackedScene" uid="uid://dm6uihhq1ocrg" path="res://Scenes/Objects/wall.tscn" id="1_r743v"]
+
+[node name="Node3D" type="Node3D"]
+
+[node name="wall" parent="." instance=ExtResource("1_r743v")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.04212, 0, 0)
+
+[node name="wall2" parent="." instance=ExtResource("1_r743v")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.84212, 0, 0)
+constant_linear_velocity = Vector3(2, 0, 0)
+
+[node name="wall3" parent="." instance=ExtResource("1_r743v")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.64212, 0, 0)
+
+[node name="wall4" parent="." instance=ExtResource("1_r743v")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.4421, 0, 0)
+
+[node name="wall5" parent="." instance=ExtResource("1_r743v")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17.2421, 0, 0)
+
+[node name="wall6" parent="." instance=ExtResource("1_r743v")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.0421, 0, 0)
+
+[node name="wall7" parent="." instance=ExtResource("1_r743v")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.8421, 0, 0)
+
+[node name="wall8" parent="." instance=ExtResource("1_r743v")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28.6421, 0, 0)
