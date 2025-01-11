@@ -62,6 +62,8 @@ func _ready():
 	for child in get_parent().get_children():
 		if child.get_index() > max_index:
 			max_index = child.get_index()
+		if child != self:
+			died.connect(child.reset_connections)
 	
 	
 		
@@ -227,19 +229,23 @@ func _input(delta):
 
 	if is_leader:
 		if Input.is_action_pressed("change"):
-				print(self.get_index())
-				print(is_leader)
-				print(self.get_index(), "pressed change")
-				changed.emit()  # Emit the knight's unique ID
-				is_leader = false
-				changed_other.emit()
-				is_leader = false
-				
-				for child in get_parent().get_children():
-					if child.is_leader:
-						leader_knight = child
-						spring_arm = child.get_node("SpringArm3D")
-						spring_arm.get_node("Camera3D").make_current()
+			print(get_parent().get_children().size())
+			print(get_parent().get_children().size() <= 1)
+			if get_parent().get_children().size() <= 1:
+				return
+			print(self.get_index())
+			print(is_leader)
+			print(self.get_index(), "pressed change")
+			changed.emit()  # Emit the knight's unique ID
+			is_leader = false
+			changed_other.emit()
+		
+			
+			for child in get_parent().get_children():
+				if child.is_leader:
+					leader_knight = child
+					spring_arm = child.get_node("SpringArm3D")
+					spring_arm.get_node("Camera3D").make_current()
 
 func _physics_process(delta):
 	velocity.y += -gravity * delta
@@ -253,6 +259,7 @@ func _physics_process(delta):
 		if target_enemy:
 			move_towards_enemy(delta)
 		else:
+			
 			follow_leader(delta)
 		
 
@@ -284,6 +291,12 @@ func _on_changed_other() -> void:
 signal hurt(int)
 var damage_amount = 5
 
+var i = 0
+func _on_hurt(damage: int) -> void:
+	$Health.take_damage(damage)
+	i = i+ 1
+	print(i)
+	
 
 signal spawn
 
@@ -301,39 +314,38 @@ func spawn_knight():
 	print(player_units)
 
 func reset_connections():
-	
-	player_units = get_parent().get_children()
-	
+	print("resetting",self.get_index())
 	var max_index = -1
 	
-	for child in player_units:
+	for child in get_parent().get_children():
 		if child.get_index() > max_index:
 			max_index = child.get_index()
-	
-	
+
 		
-	for child in player_units:
-		# Disconnect all connections to 'changed'
-		for connection in child.get_signal_connection_list("changed"):
-	
-			child.changed.disconnect(_on_changed)
-		# Disconnect all connections to 'changed_other'
-		for connection in child.get_signal_connection_list("changed_other"):
+	for child in get_parent().get_children():
+		if changed.is_connected(child._on_changed):
+			changed.disconnect(child._on_changed)
 		
-			child.changed_other.disconnect(_on_changed_other)
-		
+		if changed_other.is_connected(child._on_changed_other):
+			changed_other.disconnect(child._on_changed_other)
+
 	
 
-	for child in player_units:
-		if child != self and child.get_index() == self.get_index() + 1 :
-			changed.connect(child._on_changed)
-		if child != self and child.get_index() != self.get_index() - 1 :
-			changed_other.connect(child._on_changed_other)
-			
-	if self.get_index() == max_index:
-		changed.connect(player_units[0]._on_changed)
+	for child in get_parent().get_children():
 		
-		
+		if self.get_index() != max_index:	
+			if child != self and child.get_index() == self.get_index() + 1 :
+					changed.connect(child._on_changed)
+					
+			if child != self and child.get_index() != self.get_index() + 1 :
+					changed_other.connect(child._on_changed_other)
+		else:
+			if child.get_index() == 0:
+				changed.connect(child._on_changed)
+			if child != self and child.get_index() != 0:
+					changed_other.connect(child._on_changed_other)
+
+
 
 
 
@@ -385,11 +397,12 @@ func move_towards_enemy(delta):
 		# Stop and attack if within attack range
 		velocity.x = 0
 		velocity.z = 0
-		attack_enemy()
+		#attack_enemy()
 
 func attack_enemy():
 
-
+	print(get_parent().get_child_count())
+	
 	var random_attack = attacks.pick_random()
 	var timer = Timer.new()
 	timer.wait_time = get_attack_duration(random_attack)
@@ -398,3 +411,33 @@ func attack_enemy():
 	add_child(timer)
 	timer.start()
 	state_machine.travel(random_attack)
+
+signal died
+func _on_health_died() -> void:
+
+	print("dying")
+	var timer = Timer.new()
+	timer.wait_time = 0.8  # Set to the duration of the Death_A animation
+	timer.one_shot = true
+	timer.connect("timeout",_on_death_timer_finished)
+	add_child(timer)
+	timer.start()
+	state_machine.travel("Death_A")
+	
+
+func _on_death_timer_finished() -> void:
+	if is_leader:
+		changed.emit()  # Emit the knight's unique ID
+	
+		changed_other.emit()
+	is_leader = false
+	for child in get_parent().get_children():
+		if changed.is_connected(child._on_changed):
+			changed.disconnect(child._on_changed)
+		
+		if changed_other.is_connected(child._on_changed_other):
+			changed_other.disconnect(child._on_changed_other)
+	queue_free()
+	died.emit()
+
+	

@@ -79,20 +79,22 @@ func _input(delta):
 
 	if is_leader:
 		if Input.is_action_just_pressed("change"):
-				print(self.get_index())
-				print(is_leader)
-				print(self.get_index(), "pressed change")
-				changed.emit()  # Emit the knight's unique ID
-				is_leader = false
-				changed_other.emit()
-				is_leader = false
-				
-				for child in get_parent().get_children():
-					if child.is_leader:
-						leader_knight = child
-						spring_arm = child.get_node("SpringArm3D")
-						spring_arm.get_node("Camera3D").make_current()
-						ray_cast = child.get_node("SpringArm3D/Camera3D/RayCast3D")
+			if get_parent().get_children().size() <= 1:
+				pass
+			print(self.get_index())
+			print(is_leader)
+			print(self.get_index(), "pressed change")
+			changed.emit()  # Emit the knight's unique ID
+			is_leader = false
+			changed_other.emit()
+			is_leader = false
+			
+			for child in get_parent().get_children():
+				if child.is_leader:
+					leader_knight = child
+					spring_arm = child.get_node("SpringArm3D")
+					spring_arm.get_node("Camera3D").make_current()
+					ray_cast = child.get_node("SpringArm3D/Camera3D/RayCast3D")
 
 var block_animation = "Block"
 var blocking_animation = "Blocking"
