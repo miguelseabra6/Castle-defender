@@ -25,7 +25,11 @@ var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 @export var rotation_speed = 12.0
 var safe_spot: Vector3
 
+signal died(String)
+
 func _ready():
+	var char_manager = get_parent().get_parent().get_node("Player Units").get_children()[0]
+	died.connect(char_manager._on_enemy_died)
 	safe_spot = global_transform.origin
 	var material = helmet.get_surface_override_material(0)
 	if not material:
@@ -34,8 +38,10 @@ func _ready():
 	material.albedo_color = Color(1, 0, 0)
 
 func _physics_process(delta):
+	# Apply gravity
 	velocity.y += -gravity * delta
 
+	# Update wandering behavior periodically
 	time_since_last_change += delta
 	if time_since_last_change >= change_direction_interval:
 		idle_wander(delta)
@@ -54,11 +60,11 @@ func _physics_process(delta):
 	move_and_slide()
 
 func idle_wander(delta):
+	var vy = velocity.y  # Preserve Y velocity
 	direction = get_random_direction()
 	if direction != Vector3.ZERO:
-		var vy = velocity.y
 		velocity = lerp(velocity, direction * speed, acceleration * delta)
-		velocity.y = vy
+		velocity.y = vy  # Restore Y velocity
 
 	rotate_model_towards_direction(direction, delta)
 	update_animation_blend()
@@ -85,9 +91,12 @@ func search_for_target():
 
 func follow_target(delta):
 	if target_player:
+		var vy = velocity.y  # Preserve Y velocity
 		var direction_to_target = (target_player.global_transform.origin - global_transform.origin).normalized()
 		velocity.x = lerp(velocity.x, direction_to_target.x * speed, acceleration * delta)
 		velocity.z = lerp(velocity.z, direction_to_target.z * speed, acceleration * delta)
+		velocity.y = vy  # Restore Y velocity
+
 		rotate_model_towards_direction(direction_to_target, delta)
 		update_animation_blend()
 
@@ -115,9 +124,12 @@ func _on_attack_finished():
 	is_attacking = false
 
 func retreat_to_safe_spot(delta):
+	var vy = velocity.y  # Preserve Y velocity
 	var direction_to_safe_spot = (safe_spot - global_transform.origin).normalized()
 	velocity.x = direction_to_safe_spot.x * speed
 	velocity.z = direction_to_safe_spot.z * speed
+	velocity.y = vy  # Restore Y velocity
+
 	rotate_model_towards_direction(direction_to_safe_spot, delta)
 	update_animation_blend()
 
@@ -146,3 +158,4 @@ func _on_health_died():
 
 func _on_death_timer_finished():
 	queue_free()
+	died.emit("Mage")

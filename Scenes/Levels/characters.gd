@@ -8,16 +8,14 @@ var leader = null
 
 # Called when the scene is ready
 func _ready() -> void:
-	update_leader()
-
-# Update the leader knight
-func update_leader():
 	var chars = get_chars()
 	if chars.size() > 0:
 		set_leader(chars[0])
 	else:
 		leader = null
 		print("No knights remaining.")
+
+
 
 # Set a new leader knight
 func set_leader(new_leader):
@@ -70,7 +68,22 @@ func _on_character_died(character):
 	print("Someone died.",character)
 	if character == leader:
 		update_leader()
-		
+
+# Update the leader knight
+func update_leader():
+	var chars = get_chars()
+	if chars.size() > 0:
+		var index = chars.find(leader) + 1
+		print(index)
+		while not is_instance_valid(chars[index]):
+			index = (index + 1) % chars.size()
+			print(index)
+		set_leader(chars[index])
+	else:
+		leader = null
+		print("No knights remaining.")
+
+
 func _on_enemy_died(enemy_type: String) -> void:
 	if enemy_type == "Knight":
 		if knight_scene:
@@ -81,12 +94,22 @@ func _on_enemy_died(enemy_type: String) -> void:
 
 			# Position the new knight next to the current leader
 			if leader:
-
 				new_knight.global_transform = Transform3D(leader.global_transform.basis, leader.global_transform.origin + Vector3(2, 0, 2))  # Adjust position
-
-
 			# Add the knight to the scene
 			add_child(new_knight)
+			leader.get_node("SpringArm3D").get_node("Camera3D").make_current()
+		else:
+			print("Knight scene not assigned!")
+	elif enemy_type == "Mage":
+		if mage_scene:
+			print("Trying to spawn mage...")
+			# Instantiate the knight
+			var new_mage = mage_scene.instantiate()
+			# Position the new knight next to the current leader
+			if leader:
+				new_mage.global_transform = Transform3D(leader.global_transform.basis, leader.global_transform.origin + Vector3(2, 0, 2))  # Adjust position
+			# Add the knight to the scene
+			add_child(new_mage)
 			leader.get_node("SpringArm3D").get_node("Camera3D").make_current()
 		else:
 			print("Knight scene not assigned!")
