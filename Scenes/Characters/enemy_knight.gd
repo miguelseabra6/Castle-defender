@@ -22,7 +22,7 @@ var time_since_last_change = 0.0
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 var attack_in_progress = false
 
-signal died
+signal died(String)
 
 # List of attack animations
 var attacks = [
@@ -33,7 +33,8 @@ var attacks = [
 
 func _ready():
 	direction = get_random_direction()
-
+	var char_manager = get_parent().get_parent().get_node("Player Units").get_children()[0]
+	died.connect(char_manager._on_enemy_died)
 	# Change the helmet color to red
 	var material = helmet.get_surface_override_material(0)
 	if not material:
@@ -54,7 +55,7 @@ func _physics_process(delta):
 	move_and_slide()
 
 func update_target_player():
-	var player_units = get_parent().get_parent().get_node("Player Units").get_children()
+	var player_units = get_parent().get_parent().get_node("Player Units").get_children()[0].get_children()
 	var closest_distance = detection_range
 	target_player = null
 
@@ -164,7 +165,7 @@ func _on_health_died() -> void:
 
 func _on_death_timer_finished() -> void:
 	queue_free()
-	died.emit()
+	died.emit("Knight")
 
 func _on_sword_area_entered(body: Area3D) -> void:
 	if attack_in_progress:

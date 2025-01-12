@@ -38,9 +38,9 @@ var self_index = self.get_index()
 
 func _ready():
 	$AnimationPlayer.connect("animation_finished", _on_attack_animation_finished)
-	
+	died.connect(get_parent()._on_character_died)
 	player_units = get_parent().get_children()
-	for child in get_parent().get_parent().get_node("Enemies").get_children():
+	for child in get_parent().get_parent().get_parent().get_node("Enemies").get_children():
 			if child.is_in_group("enemies"):
 				hurt.connect(child._on_hurt)
 	
@@ -56,30 +56,6 @@ func _ready():
 		print("lwader")
 		spring_arm = $SpringArm3D
 		$SpringArm3D/Camera3D.make_current()
-
-	var max_index = -1
-	
-	for child in get_parent().get_children():
-		if child.get_index() > max_index:
-			max_index = child.get_index()
-		if child != self:
-			died.connect(child.reset_connections)
-	
-	
-		
-	for child in get_parent().get_children():
-		
-		if self.get_index() != max_index:	
-			if child != self and child.get_index() == self.get_index() + 1 :
-					changed.connect(child._on_changed)
-					
-			if child != self and child.get_index() != self.get_index() + 1 :
-					changed_other.connect(child._on_changed_other)
-		else:
-			if child.get_index() == 0:
-				changed.connect(child._on_changed)
-			if child != self and child.get_index() != 0:
-					changed_other.connect(child._on_changed_other)
 
 
 
@@ -167,7 +143,6 @@ func follow_leader(delta):
 			if child is Knight:
 				knights.append(child)
 
-		var knight_count = knights.size()
 
 		# Formation settings
 		var knights_per_row = 3  # Number of knights per row
@@ -192,8 +167,8 @@ func follow_leader(delta):
 
 		# Calculate the target position for the knight in the formation
 		var target_position = leader_pos
-		target_position += forward * (row + 1) * row_spacing  # Move rows back based on leader's forward direction
-		target_position += right * (column - (knights_per_row / 2.0)) * column_spacing  # Spread columns based on leader's right direction
+		target_position -= forward * row * row_spacing  # Move rows back based on leader's forward direction
+		target_position += right * (column - ((knights_per_row - 1) / 2.0)) * column_spacing  # Spread columns based on leader's right direction
 
 		# Calculate movement direction
 		var move_direction = (target_position - global_transform.origin).normalized()
@@ -225,27 +200,6 @@ func follow_leader(delta):
 
 
 
-func _input(delta):
-
-	if is_leader:
-		if Input.is_action_pressed("change"):
-			print(get_parent().get_children().size())
-			print(get_parent().get_children().size() <= 1)
-			if get_parent().get_children().size() <= 1:
-				return
-			print(self.get_index())
-			print(is_leader)
-			print(self.get_index(), "pressed change")
-			changed.emit()  # Emit the knight's unique ID
-			is_leader = false
-			changed_other.emit()
-		
-			
-			for child in get_parent().get_children():
-				if child.is_leader:
-					leader_knight = child
-					spring_arm = child.get_node("SpringArm3D")
-					spring_arm.get_node("Camera3D").make_current()
 
 func _physics_process(delta):
 	velocity.y += -gravity * delta
@@ -291,11 +245,11 @@ func _on_changed_other() -> void:
 signal hurt(int)
 var damage_amount = 5
 
-var i = 0
+
 func _on_hurt(damage: int) -> void:
 	$Health.take_damage(damage)
-	i = i+ 1
-	print(i)
+
+
 	
 
 signal spawn
@@ -309,42 +263,9 @@ func spawn_knight():
 	else:
 		print("Knight scene not assigned!")
 		
-	reset_connections()
+
 	player_units = get_parent().get_children()
 	print(player_units)
-
-func reset_connections():
-	print("resetting",self.get_index())
-	var max_index = -1
-	
-	for child in get_parent().get_children():
-		if child.get_index() > max_index:
-			max_index = child.get_index()
-
-		
-	for child in get_parent().get_children():
-		if changed.is_connected(child._on_changed):
-			changed.disconnect(child._on_changed)
-		
-		if changed_other.is_connected(child._on_changed_other):
-			changed_other.disconnect(child._on_changed_other)
-
-	
-
-	for child in get_parent().get_children():
-		
-		if self.get_index() != max_index:	
-			if child != self and child.get_index() == self.get_index() + 1 :
-					changed.connect(child._on_changed)
-					
-			if child != self and child.get_index() != self.get_index() + 1 :
-					changed_other.connect(child._on_changed_other)
-		else:
-			if child.get_index() == 0:
-				changed.connect(child._on_changed)
-			if child != self and child.get_index() != 0:
-					changed_other.connect(child._on_changed_other)
-
 
 
 
@@ -368,7 +289,7 @@ var target_enemy = null
 @export var attack_range = 2.0 
 
 func update_target_enemy():
-	var enemies = get_parent().get_parent().get_node("Enemies").get_children()  # Adjust path to your enemy group
+	var enemies = get_parent().get_parent().get_parent().get_node("Enemies").get_children()  # Adjust path to your enemy group
 	var closest_distance = detection_range
 	target_enemy = null
 
@@ -397,12 +318,11 @@ func move_towards_enemy(delta):
 		# Stop and attack if within attack range
 		velocity.x = 0
 		velocity.z = 0
-		#attack_enemy()
+		attack_enemy()
 
 func attack_enemy():
 
-	print(get_parent().get_child_count())
-	
+
 	var random_attack = attacks.pick_random()
 	var timer = Timer.new()
 	timer.wait_time = get_attack_duration(random_attack)
@@ -412,7 +332,7 @@ func attack_enemy():
 	timer.start()
 	state_machine.travel(random_attack)
 
-signal died
+signal died(character)
 func _on_health_died() -> void:
 
 	print("dying")
@@ -426,18 +346,8 @@ func _on_health_died() -> void:
 	
 
 func _on_death_timer_finished() -> void:
-	if is_leader:
-		changed.emit()  # Emit the knight's unique ID
-	
-		changed_other.emit()
-	is_leader = false
-	for child in get_parent().get_children():
-		if changed.is_connected(child._on_changed):
-			changed.disconnect(child._on_changed)
-		
-		if changed_other.is_connected(child._on_changed_other):
-			changed_other.disconnect(child._on_changed_other)
+	died.emit(self)
 	queue_free()
-	died.emit()
+	
 
 	

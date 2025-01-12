@@ -35,8 +35,9 @@ signal changed_other
 var player_units = null
 var self_index = self.get_index()
 func _ready():
-	player_units = get_parent().get_children()
 	
+	player_units = get_parent().get_children()
+	#died.connect(get_parent().on_character_died)
 	
 	if not is_leader:
 		for child in get_parent().get_children():
@@ -50,51 +51,6 @@ func _ready():
 		spring_arm.get_node("Camera3D").make_current()
 	anim_tree.set("parameters/Block/playback_speed", -1.0)
 	
-	var max_index = -1
-	
-	for child in get_parent().get_children():
-		if child.get_index() > max_index:
-			max_index = child.get_index()
-	
-	
-		
-	for child in get_parent().get_children():
-		
-		if self.get_index() != max_index:	
-			if child != self and child.get_index() == self.get_index() + 1 :
-					changed.connect(child._on_changed)
-					
-			if child != self and child.get_index() != self.get_index() + 1 :
-					changed_other.connect(child._on_changed_other)
-		else:
-			if child.get_index() == 0:
-				changed.connect(child._on_changed)
-			if child != self and child.get_index() != 0:
-					changed_other.connect(child._on_changed_other)
-
-
-
-
-func _input(delta):
-
-	if is_leader:
-		if Input.is_action_just_pressed("change"):
-			if get_parent().get_children().size() <= 1:
-				pass
-			print(self.get_index())
-			print(is_leader)
-			print(self.get_index(), "pressed change")
-			changed.emit()  # Emit the knight's unique ID
-			is_leader = false
-			changed_other.emit()
-			is_leader = false
-			
-			for child in get_parent().get_children():
-				if child.is_leader:
-					leader_knight = child
-					spring_arm = child.get_node("SpringArm3D")
-					spring_arm.get_node("Camera3D").make_current()
-					ray_cast = child.get_node("SpringArm3D/Camera3D/RayCast3D")
 
 var block_animation = "Block"
 var blocking_animation = "Blocking"
@@ -206,100 +162,12 @@ func get_move_input(delta):
 		anim_tree.set("parameters/conditions/grounded", false)
 	last_floor = is_on_floor()
 	
-#func follow_leader(delta):
-	#if leader_knight:
-		## Calculate the direction to the leader
-		#var direction_to_leader = (leader_knight.global_transform.origin - global_transform.origin).normalized()
-		#
-		## Get the leader's velocity and normalize it to get the direction of its movement
-		#var leader_direction = leader_knight.velocity.normalized() if leader_knight.velocity.length() > 0 else Vector3.ZERO
-		#
-		## Interpolate between the two directions
-		#var combined_direction = direction_to_leader.lerp(leader_direction, 0.5).normalized()
-		#
-		## Separation logic: Adjust direction to avoid nearby followers
-		#var separation_force = Vector3.ZERO
-		#var min_distance = 4.0  # Minimum distance to maintain from other followers
-		#
-		#for child in get_parent().get_children():
-			#if child != self:
-				#var to_other = global_transform.origin - child.global_transform.origin
-				#var distance = to_other.length()
-				#
-				#if distance < min_distance:
-					#separation_force += to_other.normalized() * (min_distance - distance)
-		#
-		## Combine leader-following and separation
-		#var final_direction = (combined_direction + separation_force).normalized()
-		#
-		## Calculate the distance to the leader
-		#var distance_to_leader = global_transform.origin.distance_to(leader_knight.global_transform.origin)
-		#
-		## Update velocity while preserving gravity
-	## Update velocity while preserving gravity
-		#var distance_threshold = 6.5  # Distance to start slowing down
-		#var stopping_distance = 6.0   # Distance at which to fully stop
-		#
-#
-		## Calculate a smooth factor based on the distance to the leader
-		#var slow_factor = clamp((distance_to_leader - stopping_distance) / (distance_threshold - stopping_distance), 0.0, 1.0)
-#
-		## Apply the smooth factor to the velocity
-		#velocity.x = final_direction.x * speed * slow_factor
-		#velocity.z = final_direction.z * speed * slow_factor
-		#var vl = velocity * model.transform.basis
-		#anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
-	#
-		## Smoothly rotate towards the movement direction
-		#if velocity.length() > 1.0:
-			  ## Get the forward direction of the leader's model
-			#var leader_forward = leader_knight.model.global_transform.basis.z.normalized()
-#
-			## Smoothly rotate the follower to align with the leader's forward direction
-			#var current_forward = model.global_transform.basis.z.normalized()  # Forward vector of the follower model
-			#var target_rotation_y = atan2(leader_forward.x, leader_forward.z)  # Target rotation based on leader's forward
-			#var current_rotation_y = atan2(current_forward.x, current_forward.z)  # Current rotation
-#
-			#model.rotation.y = lerp_angle(current_rotation_y, target_rotation_y, rotation_speed * delta)
-
 @export var horizontal_offset = 3.0  # Spread between mages
 @export var follow_distance = 10.0  # Distance behind the leader
 
 @export var move_speed = 4.0  # Movement speed for the mage
 
 
-
-#func follow_leader(delta):
-	## Get the leader's position and forward direction
-	#var leader_position = leader_knight.global_transform.origin
-	#var forward_direction = -spring_arm.global_transform.basis.z.normalized()
-	#
-	## Calculate the target position behind the leader
-	#var target_position = leader_position - forward_direction * follow_distance
-#
-	## Determine left/right offset
-	#var offset_direction = -1 if self.get_index() % 2 == 0 else 1
-	#target_position += spring_arm.global_transform.basis.x * (horizontal_offset * offset_direction) * (self.get_index() / 2)
-	#
-	## Smoothly move toward the target position
-	#var move_direction = (target_position - global_transform.origin).normalized()
-	#velocity.x = move_direction.x * move_speed
-	#velocity.z = move_direction.z * move_speed
-	#
-	#var vl = velocity * model.transform.basis
-	#anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
-#
-	## Smoothly rotate towards the movement direction
-	#if velocity.length() > 1.0:
-		  ## Get the forward direction of the leader's model
-		#var leader_forward = leader_knight.model.global_transform.basis.z.normalized()
-#
-		## Smoothly rotate the follower to align with the leader's forward direction
-		#var current_forward = model.global_transform.basis.z.normalized()  # Forward vector of the follower model
-		#var target_rotation_y = atan2(leader_forward.x, leader_forward.z)  # Target rotation based on leader's forward
-		#var current_rotation_y = atan2(current_forward.x, current_forward.z)  # Current rotation
-#
-		#model.rotation.y = lerp_angle(current_rotation_y, target_rotation_y, rotation_speed * delta)
 
 func get_leader_rotation():
 	if leader_knight.velocity.length() > 0:
@@ -412,34 +280,6 @@ func _on_changed_other() -> void:
 	
 
 
-func reset_connections():
-	
-	
-	player_units = get_parent().get_children()
-	var max_index = -1
-	
-	for child in player_units:
-		if child.get_index() > max_index:
-			max_index = child.get_index()
-	
-
-	for child in player_units:
-		# Disconnect all connections to 'changed'
-		for connection in child.get_signal_connection_list("changed"):
-			child.changed.disconnect(_on_changed)
-		# Disconnect all connections to 'changed_other'
-		for connection in child.get_signal_connection_list("changed_other"):
-			child.changed_other.disconnect(_on_changed_other)
-
-
-	for child in player_units:
-		if child != self and child.get_index() == self.get_index() - 1 :
-			child.changed.connect(_on_changed)
-		if child != self and child.get_index() != self.get_index() - 1 :
-			child.changed_other.connect(_on_changed_other)
-	
-	if self.get_index() == 0:
-		player_units[max_index].changed.connect(_on_changed)
 
 
 signal hurt(int)
@@ -451,3 +291,25 @@ func _on_sword_area_entered(body : Area3D) -> void:
 
 	if body.is_in_group("hurt_boxes"):
 		hurt.emit(5)
+
+func _on_hurt(damage: int) -> void:
+	$Health.take_damage(damage)
+
+
+signal died
+func _on_health_died() -> void:
+
+	print("dying")
+	var timer = Timer.new()
+	timer.wait_time = 0.8  # Set to the duration of the Death_A animation
+	timer.one_shot = true
+	timer.connect("timeout",_on_death_timer_finished)
+	add_child(timer)
+	timer.start()
+	state_machine.travel("Death_A")
+	
+
+func _on_death_timer_finished() -> void:
+	died.emit()
+	queue_free()
+	
