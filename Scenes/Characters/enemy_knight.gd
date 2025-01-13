@@ -134,12 +134,13 @@ func attack():
 
 	# Set up a timer to finish the attack
 	var timer = Timer.new()
-	timer.wait_time = get_attack_duration(random_attack)
+	timer.wait_time = 3.0
 	timer.one_shot = true
 	timer.connect("timeout", _on_attack_finished)
 	add_child(timer)
 	timer.start()
 	state_machine.travel(random_attack)
+	
 func get_attack_duration(attack: String) -> float:
 	match attack:
 		"1h_melee_chop": return 1.0667
@@ -153,6 +154,19 @@ func _on_attack_finished():
 func _on_hurt(damage: int) -> void:
 	$Health.take_damage(damage)
 
+func _on_slow():
+	speed = 2
+	var timer = Timer.new()
+	timer.wait_time = 10
+	timer.one_shot = true
+	timer.connect("timeout", _on_slow_timer_finished)
+	add_child(timer)
+	timer.start()
+
+func _on_slow_timer_finished():
+	speed = 3.5
+	
+	
 func _on_health_died() -> void:
 	print("dying")
 	var timer = Timer.new()
@@ -174,4 +188,20 @@ func _on_sword_area_entered(body: Area3D) -> void:
 	attack_in_progress = true
 
 	if body.is_in_group("player_hurt_boxes"):
-		body.get_parent()._on_hurt(5)
+		var player = body.get_parent()
+
+		# Calculate attack direction
+		var attack_direction = (player.global_transform.origin - global_transform.origin).normalized()
+
+		# Knight's forward direction based on the model's rotation
+		var knight_forward = Vector3(sin(model.rotation.y), 0, cos(model.rotation.y)).normalized()
+
+		# Calculate dot product to check if the attack is coming from the front
+		var dot_product = knight_forward.dot(attack_direction)
+
+		# If blocking and the attack is from the front, block the attack
+		if player.is_blocking and dot_product > 0.5:
+			print("Player blocked the attack!")
+		else:
+			print("Player hit!")
+			player._on_hurt(5)

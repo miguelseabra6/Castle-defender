@@ -89,14 +89,11 @@ func _unhandled_input(event):
 			spring_arm.rotation_degrees.x = clamp(spring_arm.rotation_degrees.x, -90.0, 30.0)
 			spring_arm.rotation.y -= event.relative.x * mouse_sensitivity
 		
-		if event.is_action_pressed("attack"):
-			print("attack")
-			attack_enemy()
-	if event.is_action_pressed("block"):
-		print(self.get_index())
-		print(is_leader)
-		print(changed.get_connections())
-		print(changed_other.get_connections())
+		#if event.is_action_pressed("attack"):
+			#print("attack")
+			#attack_enemy()
+	#if event.is_action_pressed("block"):
+#
 		#if not is_blocking:
 			## Start blocking (Play the 'Block' animation once)
 			#state_machine.travel(block_animation)
@@ -108,7 +105,26 @@ func _unhandled_input(event):
 			## Stop blocking (play the reverse block animation or transition to idle)
 			#state_machine.travel(reverse_block_animation)  # Or transition to idle
 			#is_blocking = false
+func _input(delta):
+	if is_leader:
+		if Input.is_action_pressed("attack"):
+			print("attack")
+			attack_enemy()
+		# Check if the right mouse button (block) is being pressed
+		if Input.is_action_pressed("block"):
+	
+				# Start the block animation once
+				state_machine.travel(blocking_animation)
+				is_blocking = true
 
+				# Keep playing the blocking animation while the button is held
+				#state_machine.travel(blocking_animation)
+		elif Input.is_action_just_released("block"):
+			if is_blocking:
+		# Stop blocking and play reverse block animation or transition to idle
+				is_blocking = false
+				state_machine.travel(reverse_block_animation)
+				
 func get_move_input(delta):
 	var vy = velocity.y
 	
@@ -143,9 +159,10 @@ func follow_leader(delta):
 			if child is Knight:
 				knights.append(child)
 
+		var knight_count = knights.size()
 
 		# Formation settings
-		var knights_per_row = 3  # Number of knights per row
+		var knights_per_row = 4  # Number of knights per row
 		var row_spacing = 3.0  # Distance between rows
 		var column_spacing = 2.5  # Distance between knights in a row
 
@@ -154,21 +171,31 @@ func follow_leader(delta):
 		if index == -1:
 			return  # Skip if this unit is not a knight
 
-		var row = int(index / knights_per_row)
-		var column = index % knights_per_row
-
 		# Get the leader's position and rotation
 		var leader_pos = leader_knight.global_transform.origin
 		var leader_rotation = leader_knight.model.rotation.y
 
 		# Calculate the formation direction based on the leader's rotation
 		var forward = Vector3(sin(leader_rotation), 0, cos(leader_rotation)).normalized()
-		var right = Vector3(cos(leader_rotation), 0, -sin(leader_rotation)).normalized()
+		var right = Vector3(cos(leader_rotation), 0, sin(leader_rotation)).normalized()
+		var target_position = null
+		# Special case for exactly 2 knights
+		if knight_count == 2:
+			if index == 0:
+		# First knight goes to the right of the leader
+				target_position = leader_pos + right * column_spacing
+			elif index == 1:
+		# Second knight goes to the left of the leader
+				target_position = leader_pos - right * column_spacing
+		else:
+			# Standard formation logic for more than 2 knights
+			var row = int(index / knights_per_row)
+			var column = index % knights_per_row
 
-		# Calculate the target position for the knight in the formation
-		var target_position = leader_pos
-		target_position -= forward * row * row_spacing  # Move rows back based on leader's forward direction
-		target_position += right * (column - ((knights_per_row - 1) / 2.0)) * column_spacing  # Spread columns based on leader's right direction
+			target_position = leader_pos
+			target_position -= forward * (row + 1) * row_spacing  # Move rows back based on leader's forward direction
+			var effective_knights_per_row = min(knights_per_row, knight_count)
+			target_position += right * (column - ((effective_knights_per_row - 1 ) / 2.0)) * column_spacing
 
 		# Calculate movement direction
 		var move_direction = (target_position - global_transform.origin).normalized()
@@ -183,20 +210,13 @@ func follow_leader(delta):
 		var vl = velocity * model.transform.basis
 		anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
 
-		# Smooth rotation toward the movement direction
-	 
 		# Smoothly rotate toward the movement direction
-	if velocity.length() > 1.0:
-			  # Get the forward direction of the leader's model
+		if velocity.length() > 1.0:
 			var leader_forward = leader_knight.model.global_transform.basis.z.normalized()
-
-			# Smoothly rotate the follower to align with the leader's forward direction
-			var current_forward = model.global_transform.basis.z.normalized()  # Forward vector of the follower model
-			var target_rotation_y = atan2(leader_forward.x, leader_forward.z)  # Target rotation based on leader's forward
-			var current_rotation_y = atan2(current_forward.x, current_forward.z)  # Current rotation
-
+			var current_forward = model.global_transform.basis.z.normalized()
+			var target_rotation_y = atan2(leader_forward.x, leader_forward.z)
+			var current_rotation_y = atan2(current_forward.x, current_forward.z)
 			model.rotation.y = lerp_angle(current_rotation_y, target_rotation_y, rotation_speed * delta)
-
 
 
 
@@ -254,19 +274,6 @@ func _on_hurt(damage: int) -> void:
 
 signal spawn
 
-func spawn_knight():
-	if knight_scene:
-		print("trying to spawn knight")
-		var new_knight = knight_scene.instantiate()
-		new_knight.global_transform = Transform3D(global_transform.basis, global_transform.origin + Vector3(2, 0, 2))  # Adjust position
-		get_parent().add_child(new_knight)
-	else:
-		print("Knight scene not assigned!")
-		
-
-	player_units = get_parent().get_children()
-	print(player_units)
-
 
 
 
@@ -318,6 +325,10 @@ func move_towards_enemy(delta):
 		# Stop and attack if within attack range
 		velocity.x = 0
 		velocity.z = 0
+		var target_rotation_y = atan2(direction_to_enemy.x, direction_to_enemy.z)
+		model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, delta * 10.0)
+		var vl = velocity * model.transform.basis
+		anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
 		attack_enemy()
 
 func attack_enemy():
@@ -325,7 +336,7 @@ func attack_enemy():
 
 	var random_attack = attacks.pick_random()
 	var timer = Timer.new()
-	timer.wait_time = get_attack_duration(random_attack)
+	timer.wait_time = 0.5
 	timer.one_shot = true
 	timer.connect("timeout",_on_attack_animation_finished)
 	add_child(timer)

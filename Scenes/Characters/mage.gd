@@ -2,7 +2,8 @@ extends CharacterBody3D
 class_name Mage
 
 @export var spell_scene : PackedScene  = ResourceLoader.load("res://Scenes/Utils/spell.tscn")
-
+@export var spell_slow : PackedScene  = ResourceLoader.load("res://Scenes/Utils/spell_slow.tscn")
+@export var spell_vulnerable : PackedScene  = ResourceLoader.load("res://Scenes/Utils/spell_vulnerable.tscn")
 @export var speed = 6.0
 @export var acceleration = 4.0
 @export var jump_speed = 8.0
@@ -35,10 +36,10 @@ signal changed_other
 var player_units = null
 var self_index = self.get_index()
 func _ready():
-	
+	died.connect(get_parent()._on_character_died)
 	player_units = get_parent().get_children()
-	#died.connect(get_parent().on_character_died)
-	
+
+
 	if not is_leader:
 		for child in get_parent().get_children():
 			if child.is_leader:
@@ -78,43 +79,14 @@ func _unhandled_input(event):
 			spring_arm.rotation.x -= event.relative.y * mouse_sensitivity
 			spring_arm.rotation_degrees.x = clamp(spring_arm.rotation_degrees.x, -90.0, 30.0)
 			spring_arm.rotation.y -= event.relative.x * mouse_sensitivity
-		if event.is_action_pressed("attack"):
-	
-			var new_spell :  = spell_scene.instantiate()
-
-
-
-			owner.add_child(new_spell)
-			new_spell.global_position = global_position + Vector3(0, 1.5, 1)  # Offset to spawn in front of the camera
-		  
-		# Get the forward direction of the camera
-
-			ray_cast.target_position = Vector3(0, 0, 100)
-			if ray_cast.is_colliding():
-		# Get the collision point
-				var collision_point = ray_cast.get_collision_point()
-
-
-		# Get the object that was hit
-				var hit_object = ray_cast.get_collider()
-
-
-		# Set the spell's movement direction toward the collision point
-				var direction = (collision_point - new_spell.global_position).normalized()
-				new_spell.set("direction", direction)  # Pass the direction to the spell
-			else:
-			# Get the direction the spring_arm is pointing
-				var direction = -spring_arm.global_transform.basis.z.normalized()
-
-			# Calculate the target position 50 meters away in the direction of the spring_arm
-				var target_position = spring_arm.global_position + (direction * 50)
-
-			# Calculate a direction vector from the spell's position to the target position
-				var adjusted_direction = (target_position - new_spell.global_position).normalized()
-				new_spell.set("direction", adjusted_direction)  # Pass the direction to the spell
-
-				
-		if event.is_action_pressed("zoom_in"):
+		elif event.is_action_pressed("attack"):
+			play_attack_animation()
+			attack(spell_scene)
+		elif event.is_action_pressed("spell_slow"):
+			attack_slow()
+		elif event.is_action_pressed("spell_vulnerable"):
+			attack_vulnerable()
+		elif event.is_action_pressed("zoom_in"):
 			spring_arm.spring_length = clamp(spring_arm.spring_length - 1, min_length, max_length)
 
 		elif event.is_action_pressed("zoom_out"):
@@ -122,19 +94,8 @@ func _unhandled_input(event):
 
 			
 			
-		if event.is_action_pressed("block"):
-			$AnimationPlayer.play_backwards(block_animation)
-		#if not is_blocking:
-			## Start blocking (Play the 'Block' animation once)
-			#state_machine.travel(block_animation)
-			#is_blocking = true
-			## After the block animation ends, transition to the "Blocking" state (looping)
-			#state_machine.travel(blocking_animation)
-	#else:
-		#if is_blocking:
-			## Stop blocking (play the reverse block animation or transition to idle)
-			#state_machine.travel(reverse_block_animation)  # Or transition to idle
-			#is_blocking = false
+		
+
 
 func get_move_input(delta):
 	var vy = velocity.y
@@ -248,17 +209,86 @@ func _physics_process(delta):
 		
 		get_move_input(delta)
 		move_and_slide()
-		if velocity.length() > 1.0:
-			var adjusted_rotation_y = spring_arm.rotation.y + PI
-			model.rotation.y = lerp_angle(model.rotation.y, adjusted_rotation_y, rotation_speed * delta)
+		
 	else:
 		# Follower logic for the knight
 		follow_leader(delta)
 		move_and_slide()
+		
+	if velocity.length() > 1.0:
+		var adjusted_rotation_y = spring_arm.rotation.y + PI
+		model.rotation.y = lerp_angle(model.rotation.y, adjusted_rotation_y, rotation_speed * delta)
 
 
+func attack(spell:PackedScene):
+	var new_spell = null
+	if spell == spell_scene:
+		new_spell  = spell_scene.instantiate()
+	elif spell == spell_slow:
+		new_spell = spell_slow.instantiate()
+	elif spell == spell_vulnerable:
+		new_spell = spell_vulnerable.instantiate()
+	get_tree().root.add_child(new_spell)
+	var tip = get_node("Rig/Skeleton3D/2H_Staff/tip")
+	new_spell.global_position = tip.global_position # Offset to spawn in front of the camera
+ 
+# Get the forward direction of the camera
+	ray_cast.target_position = Vector3(0, 0, 100)
+	if ray_cast.is_colliding():
+# Get the collision point
+		var collision_point = ray_cast.get_collision_point()
+# Get the object that was hit
+		var hit_object = ray_cast.get_collider()
+# Set the spell's movement direction toward the collision point
+		var direction = (collision_point - new_spell.global_position).normalized()
+		new_spell.set("direction", direction)  # Pass the direction to the spell
+	else:
+	# Get the direction the spring_arm is pointing
+		var direction = -spring_arm.global_transform.basis.z.normalized()
+	# Calculate the target position 50 meters away in the direction of the spring_arm
+		var target_position = spring_arm.global_position + (direction * 50)
+	# Calculate a direction vector from the spell's position to the target position
+		var adjusted_direction = (target_position - new_spell.global_position).normalized()
+		new_spell.set("direction", adjusted_direction)  # Pass the direction to the spell
 
+func play_attack_animation():
+	if not is_attacking:
+		state_machine.travel("Spellcast_Shoot")
+		is_attacking = true
+		var attack_timer = Timer.new()
+		attack_timer.wait_time = 1.0
+		attack_timer.one_shot = true
+		attack_timer.connect("timeout", _on_attack_finished)
+		add_child(attack_timer)
+		attack_timer.start()
 
+func _on_attack_finished():
+	is_attacking = false
+		
+		
+func attack_slow():
+	if not is_attacking:
+		state_machine.travel("Spellcast_Shoot")
+		is_attacking = true
+		var attack_timer = Timer.new()
+		attack_timer.wait_time = 1.0
+		attack_timer.one_shot = true
+		attack_timer.connect("timeout", _on_attack_finished)
+		add_child(attack_timer)
+		attack_timer.start()
+		attack(spell_slow)
+
+func attack_vulnerable():
+	if not is_attacking:
+		state_machine.travel("Spellcast_Shoot")
+		is_attacking = true
+		var attack_timer = Timer.new()
+		attack_timer.wait_time = 1.0
+		attack_timer.one_shot = true
+		attack_timer.connect("timeout", _on_attack_finished)
+		add_child(attack_timer)
+		attack_timer.start()
+		attack(spell_vulnerable)
 func _on_changed() -> void:
 
 		is_leader = true
@@ -296,7 +326,7 @@ func _on_hurt(damage: int) -> void:
 	$Health.take_damage(damage)
 
 
-signal died
+signal died(character)
 func _on_health_died() -> void:
 
 	print("dying")
@@ -310,6 +340,6 @@ func _on_health_died() -> void:
 	
 
 func _on_death_timer_finished() -> void:
-	died.emit()
+	died.emit(self)
 	queue_free()
 	

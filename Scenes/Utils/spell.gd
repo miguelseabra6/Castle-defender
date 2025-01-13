@@ -9,7 +9,9 @@ func _process(delta):
 		
 func _on_body_entered(body: Node) -> void:
 	print(body)
-	if body.is_in_group("enemies"):
+	if body.is_in_group("enemy_mages"):
+		body._on_hurt(5)
+	if body.is_in_group("enemy_knights"):
 		body._on_hurt(5)
 	#if body.is_in_group("knights"):
 		#body.enhance()

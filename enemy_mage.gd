@@ -1,7 +1,7 @@
 extends CharacterBody3D
 class_name Enemy_Mage
 
-@export var speed = 3.5
+@export var speed = 7
 @export var acceleration = 2.0
 @onready var spawn = global_position
 @export var spell_scene: PackedScene = ResourceLoader.load("res://Scenes/Utils/enemy_spell.tscn")
@@ -14,7 +14,8 @@ class_name Enemy_Mage
 @onready var anim_tree = $AnimationTree
 @onready var state_machine = $AnimationTree["parameters/playback"]
 @onready var model = $Rig
-@export var attack_range = 10.0
+@export var attack_range = 15.0
+@export var retreat_distance = 10.0  # Retreat if player is closer than this distance
 var is_attacking = false
 var target_player = null
 var direction = Vector3.ZERO
@@ -38,36 +39,77 @@ func _ready():
 	material.albedo_color = Color(1, 0, 0)
 
 func _physics_process(delta):
-	# Apply gravity
 	velocity.y += -gravity * delta
 
-	# Update wandering behavior periodically
-	time_since_last_change += delta
-	if time_since_last_change >= change_direction_interval:
-		idle_wander(delta)
-		time_since_last_change = 0.0
+	update_target_player()
 
-	if $Health.hp < retreat_health_threshold:
-		retreat_to_safe_spot(delta)
-	elif target_player:
-		if global_transform.origin.distance_to(target_player.global_transform.origin) <= attack_range:
-			attack()
-		else:
-			follow_target(delta)
+	if target_player:
+		move_towards_player(delta)
 	else:
-		search_for_target()
+		idle_wander(delta)
 
 	move_and_slide()
 
-func idle_wander(delta):
-	var vy = velocity.y  # Preserve Y velocity
-	direction = get_random_direction()
-	if direction != Vector3.ZERO:
-		velocity = lerp(velocity, direction * speed, acceleration * delta)
-		velocity.y = vy  # Restore Y velocity
+func update_target_player():
+	var player_units = get_parent().get_parent().get_node("Player Units").get_children()[0].get_children()
+	var closest_distance = detection_range
+	target_player = null
 
-	rotate_model_towards_direction(direction, delta)
-	update_animation_blend()
+	for player in player_units:
+		var distance = global_transform.origin.distance_to(player.global_transform.origin)
+		if distance < closest_distance:
+			closest_distance = distance
+			target_player = player
+
+func idle_wander(delta):
+	time_since_last_change += delta
+	if time_since_last_change >= change_direction_interval:
+		direction = get_random_direction()
+		time_since_last_change = 0.0
+
+	if direction != Vector3.ZERO:
+		var vy = velocity.y
+		velocity.y = 0
+		velocity = lerp(velocity, direction * speed, acceleration * delta)
+		velocity.y = vy
+
+		var target_rotation_y = atan2(direction.x, direction.z)
+		model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, delta * 10.0)
+
+	var vl = velocity * model.transform.basis
+	anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
+
+func move_towards_player(delta):
+	var player_pos = target_player.global_transform.origin
+	var direction_to_player = (player_pos - global_transform.origin).normalized()
+	var distance_to_player = global_transform.origin.distance_to(player_pos)
+
+	if distance_to_player < retreat_distance:
+		# Retreat while attacking if the player is too close
+		var retreat_direction = (global_transform.origin - player_pos).normalized()
+		velocity.x = retreat_direction.x * speed
+		velocity.z = retreat_direction.z * speed
+
+		var target_rotation_y = atan2(-retreat_direction.x, -retreat_direction.z)
+		model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, delta * rotation_speed)
+
+		if not is_attacking:
+			attack()
+	elif distance_to_player > attack_range:
+		# Approach the player if outside of attack range
+		velocity.x = direction_to_player.x * speed
+		velocity.z = direction_to_player.z * speed
+
+		var target_rotation_y = atan2(direction_to_player.x, direction_to_player.z)
+		model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, delta * rotation_speed)
+	elif distance_to_player <= attack_range and not is_attacking:
+		velocity.x = 0
+		velocity.z = 0
+		attack()
+	var vl = velocity * model.transform.basis
+	anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
+
+
 
 func get_random_direction() -> Vector3:
 	if randf() < idle_chance:
@@ -78,28 +120,6 @@ func get_random_direction() -> Vector3:
 	var target_position = Vector3(random_x, global_transform.origin.y, random_z)
 	return (target_position - global_transform.origin).normalized()
 
-func search_for_target():
-	var player_units = get_parent().get_parent().get_node("Player Units").get_children()
-	var closest_distance = detection_range
-	target_player = null
-
-	for player in player_units:
-		var distance = global_transform.origin.distance_to(player.global_transform.origin)
-		if distance < closest_distance:
-			closest_distance = distance
-			target_player = player
-
-func follow_target(delta):
-	if target_player:
-		var vy = velocity.y  # Preserve Y velocity
-		var direction_to_target = (target_player.global_transform.origin - global_transform.origin).normalized()
-		velocity.x = lerp(velocity.x, direction_to_target.x * speed, acceleration * delta)
-		velocity.z = lerp(velocity.z, direction_to_target.z * speed, acceleration * delta)
-		velocity.y = vy  # Restore Y velocity
-
-		rotate_model_towards_direction(direction_to_target, delta)
-		update_animation_blend()
-
 func attack():
 	if not is_attacking:
 		is_attacking = true
@@ -107,11 +127,10 @@ func attack():
 
 		var spell = spell_scene.instantiate()
 		owner.add_child(spell)
-		spell.global_position = global_position + Vector3(0, 1.5, 1)
-		var direction_to_target = (target_player.global_transform.origin - spell.global_position).normalized()
+		var tip = get_node("Rig/Skeleton3D/2H_Staff/tip")
+		spell.global_position = tip.global_position 
+		var direction_to_target = ((target_player.global_transform.origin + Vector3(0,1,0))- spell.global_position).normalized()
 		spell.set("direction", direction_to_target)
-
-		rotate_model_towards_direction(direction_to_target, get_process_delta_time())
 
 		var attack_timer = Timer.new()
 		attack_timer.wait_time = 1.0
@@ -123,29 +142,22 @@ func attack():
 func _on_attack_finished():
 	is_attacking = false
 
-func retreat_to_safe_spot(delta):
-	var vy = velocity.y  # Preserve Y velocity
-	var direction_to_safe_spot = (safe_spot - global_transform.origin).normalized()
-	velocity.x = direction_to_safe_spot.x * speed
-	velocity.z = direction_to_safe_spot.z * speed
-	velocity.y = vy  # Restore Y velocity
-
-	rotate_model_towards_direction(direction_to_safe_spot, delta)
-	update_animation_blend()
-
-func rotate_model_towards_direction(direction, delta):
-	if direction != Vector3.ZERO:
-		var target_rotation_y = atan2(direction.x, direction.z)
-		model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, delta * rotation_speed)
-
-func update_animation_blend():
-	var vl = velocity * model.transform.basis
-	anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
-
 func _on_hurt(damage: int):
 	$Health.take_damage(damage)
 	print("Mage hurt! HP left:", $Health.hp)
 
+func _on_slow():
+	speed = 4.5
+	var timer = Timer.new()
+	timer.wait_time = 10
+	timer.one_shot = true
+	timer.connect("timeout", _on_slow_timer_finished)
+	add_child(timer)
+	timer.start()
+
+func _on_slow_timer_finished():
+	speed = 7
+	
 func _on_health_died():
 	print("Mage dying...")
 	var death_timer = Timer.new()
