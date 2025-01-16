@@ -15,6 +15,8 @@ const JUMP_VELOCITY = 4.5
 @onready var anim_tree  = $AnimationTree
 @onready var spring_arm = null
 
+@onready var helmet = get_node("Rig/Skeleton3D/Knight_Helmet/Knight_Helmet")
+
 @onready var state_machine = $AnimationTree["parameters/playback"]
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 @export var mouse_sensitivity = 0.0030
@@ -26,10 +28,10 @@ var attacks = [
 	"1H_Melee_Attack_Slice_Horizontal",
 ]
 	
-var leader_knight = null
+var leader = null
 @export var is_leader = false
 
-var is_attacking = false 
+var is_attacking = false
 signal changed()
 signal changed_other
 
@@ -41,15 +43,15 @@ func _ready():
 	died.connect(get_parent()._on_character_died)
 	player_units = get_parent().get_children()
 	for child in get_parent().get_parent().get_parent().get_node("Enemies").get_children():
-			if child.is_in_group("enemies"):
-				hurt.connect(child._on_hurt)
+		if child.is_in_group("enemies"):
+			hurt.connect(child._on_hurt)
 	
 		
 	
 	if not is_leader:
 		for child in get_parent().get_children():
 			if child.is_leader:
-				leader_knight = child
+				leader = child
 				spring_arm = child.get_node("SpringArm3D")
 		
 	else:
@@ -114,8 +116,8 @@ func _input(delta):
 		if Input.is_action_pressed("block"):
 	
 				# Start the block animation once
-				state_machine.travel(blocking_animation)
-				is_blocking = true
+			state_machine.travel(blocking_animation)
+			is_blocking = true
 
 				# Keep playing the blocking animation while the button is held
 				#state_machine.travel(blocking_animation)
@@ -151,8 +153,9 @@ func get_move_input(delta):
 		anim_tree.set("parameters/conditions/grounded", false)
 	last_floor = is_on_floor()
 	
+
 func follow_leader(delta):
-	if leader_knight:
+	if leader:
 		# Filter only knights from the parent's children
 		var knights = []
 		for child in get_parent().get_children():
@@ -165,15 +168,17 @@ func follow_leader(delta):
 		var knights_per_row = 4  # Number of knights per row
 		var row_spacing = 3.0  # Distance between rows
 		var column_spacing = 2.5  # Distance between knights in a row
-
+		if not leader is Knight:
+			row_spacing += 1.0  # Add extra distance in front of the mage
+		
 		# Get this knight's position in the formation
 		var index = knights.find(self)
 		if index == -1:
 			return  # Skip if this unit is not a knight
 
 		# Get the leader's position and rotation
-		var leader_pos = leader_knight.global_transform.origin
-		var leader_rotation = leader_knight.model.rotation.y
+		var leader_pos = leader.global_transform.origin
+		var leader_rotation = leader.model.rotation.y
 
 		# Calculate the formation direction based on the leader's rotation
 		var forward = Vector3(sin(leader_rotation), 0, cos(leader_rotation)).normalized()
@@ -181,19 +186,29 @@ func follow_leader(delta):
 		var target_position = null
 		# Special case for exactly 2 knights
 		if knight_count == 2:
-			if index == 0:
-		# First knight goes to the right of the leader
-				target_position = leader_pos + right * column_spacing
-			elif index == 1:
-		# Second knight goes to the left of the leader
-				target_position = leader_pos - right * column_spacing
+			if leader is Knight:
+				if index == 0:
+					target_position = leader_pos + right * column_spacing
+				elif index == 1:
+					target_position = leader_pos - right * column_spacing
+			else:
+				if index == 0:
+					target_position = leader_pos + forward * row_spacing + right * column_spacing
+				elif index == 1:
+					target_position = leader_pos + forward * row_spacing - right * column_spacing
 		else:
 			# Standard formation logic for more than 2 knights
 			var row = int(index / knights_per_row)
 			var column = index % knights_per_row
 
 			target_position = leader_pos
-			target_position -= forward * (row + 1) * row_spacing  # Move rows back based on leader's forward direction
+			if leader is Knight:
+			
+			# Place knights beside the leader in the first row
+				target_position += right * (column - ((knights_per_row - 1) / 2.0)) * column_spacing
+				target_position -= forward * row * row_spacing  # Move rows back based on the leader's forward direction
+			else:
+				target_position += forward * 1.5 * (row + 1) * row_spacing
 			var effective_knights_per_row = min(knights_per_row, knight_count)
 			target_position += right * (column - ((effective_knights_per_row - 1 ) / 2.0)) * column_spacing
 
@@ -212,7 +227,7 @@ func follow_leader(delta):
 
 		# Smoothly rotate toward the movement direction
 		if velocity.length() > 1.0:
-			var leader_forward = leader_knight.model.global_transform.basis.z.normalized()
+			var leader_forward = leader.model.global_transform.basis.z.normalized()
 			var current_forward = model.global_transform.basis.z.normalized()
 			var target_rotation_y = atan2(leader_forward.x, leader_forward.z)
 			var current_rotation_y = atan2(current_forward.x, current_forward.z)
@@ -257,16 +272,26 @@ func _on_changed() -> void:
 func _on_changed_other() -> void:
 	for child in get_parent().get_children():
 		if child.is_leader:
-			leader_knight = child
+			leader = child
 			spring_arm = child.get_node("SpringArm3D")
 			
 
 
 signal hurt(int)
 var damage_amount = 5
-
+var i = 0
 
 func _on_hurt(damage: int) -> void:
+	#i += 0.1
+	#var material = helmet.get_surface_override_material(0)
+	#if not material:
+		#material = StandardMaterial3D.new()
+		#helmet.set_surface_override_material(0, material)
+	#var red = 1.0  # Clamp red between 0 and 1
+	#var green = max(1 - i, 0)  # Reduce green over time
+	#var blue = max(1 - i, 0)  # Reduce blue over time
+#
+	#material.albedo_color = Color(red, green, blue)
 	$Health.take_damage(damage)
 
 
@@ -280,7 +305,7 @@ signal spawn
 @onready var attack_in_progress = false
 
 func _on_attack_animation_finished() -> void:
-		attack_in_progress = false
+	attack_in_progress = false
 		
 func _on_sword_area_entered(body : Area3D) -> void:
 	if attack_in_progress:
@@ -292,8 +317,8 @@ func _on_sword_area_entered(body : Area3D) -> void:
 		body.get_parent()._on_hurt(5)
 		
 var target_enemy = null
-@export var detection_range = 5.0
-@export var attack_range = 2.0 
+@export var detection_range = 3.0
+@export var attack_range = 2.0
 
 func update_target_enemy():
 	var enemies = get_parent().get_parent().get_parent().get_node("Enemies").get_children()  # Adjust path to your enemy group
@@ -336,7 +361,7 @@ func attack_enemy():
 
 	var random_attack = attacks.pick_random()
 	var timer = Timer.new()
-	timer.wait_time = 0.5
+	timer.wait_time = 0.8
 	timer.one_shot = true
 	timer.connect("timeout",_on_attack_animation_finished)
 	add_child(timer)

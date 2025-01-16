@@ -4,15 +4,13 @@ class_name Mage
 @export var spell_scene : PackedScene  = ResourceLoader.load("res://Scenes/Utils/spell.tscn")
 @export var spell_slow : PackedScene  = ResourceLoader.load("res://Scenes/Utils/spell_slow.tscn")
 @export var spell_vulnerable : PackedScene  = ResourceLoader.load("res://Scenes/Utils/spell_vulnerable.tscn")
-@export var speed = 6.0
+@export var speed = 5.0
 @export var acceleration = 4.0
 @export var jump_speed = 8.0
 
 
 var jumping = false
 
-const SPEED = 5.0
-const JUMP_VELOCITY = 4.5
 @onready var model = $Rig
 @onready var anim_tree  = $AnimationTree
 @onready var spring_arm = null
@@ -70,7 +68,7 @@ var is_blocking = false
 signal hit
 @onready var camera = $SpringArm3D/Camera3D
 @onready var ray_cast = $SpringArm3D/Camera3D/RayCast3D
-@export var bullet_speed = 50.0
+@export var bullet_speed = 70.0
 @export var min_length: float = 2.0  # Minimum zoom distance
 @export var max_length: float = 50.0  # Maximum zoom distance
 func _unhandled_input(event):
@@ -80,8 +78,7 @@ func _unhandled_input(event):
 			spring_arm.rotation_degrees.x = clamp(spring_arm.rotation_degrees.x, -90.0, 30.0)
 			spring_arm.rotation.y -= event.relative.x * mouse_sensitivity
 		elif event.is_action_pressed("attack"):
-			play_attack_animation()
-			attack(spell_scene)
+			attack_default()
 		elif event.is_action_pressed("spell_slow"):
 			attack_slow()
 		elif event.is_action_pressed("spell_vulnerable"):
@@ -126,7 +123,7 @@ func get_move_input(delta):
 @export var horizontal_offset = 3.0  # Spread between mages
 @export var follow_distance = 10.0  # Distance behind the leader
 
-@export var move_speed = 4.0  # Movement speed for the mage
+@export var move_speed = 5.0  # Movement speed for the mage
 
 
 
@@ -165,15 +162,17 @@ func follow_leader(delta):
 			var row_spacing = 2.5
 			var column_spacing = 2.5
 
-			# Get this mage's position in the formation
+			var formation_width = 3  # Number of mages per row
+
 			var index = get_parent().get_children().find(self)
-			var row = index / 3
-			var column = index % 3
+			var row = floor(index / formation_width)
+			var column = index % formation_width
 
 			# Calculate the target position behind the group of knights
 			var target_position = average_position
 			target_position -= average_direction * (row + 1) * row_spacing  # Move rows back
-			target_position += Vector3(-average_direction.z, 0, average_direction.x) * (column - 1.5) * column_spacing  # Spread columns sideways
+			target_position += Vector3(-average_direction.z, 0, average_direction.x) * (column - (formation_width - 1) / 2.0) * column_spacing  # Spread columns sideways
+
 
 			# Move toward the target position
 			var move_direction = (target_position - global_transform.origin).normalized()
@@ -251,17 +250,17 @@ func attack(spell:PackedScene):
 		var adjusted_direction = (target_position - new_spell.global_position).normalized()
 		new_spell.set("direction", adjusted_direction)  # Pass the direction to the spell
 
-func play_attack_animation():
+func attack_default():
 	if not is_attacking:
 		state_machine.travel("Spellcast_Shoot")
 		is_attacking = true
 		var attack_timer = Timer.new()
-		attack_timer.wait_time = 1.0
+		attack_timer.wait_time = 0.5
 		attack_timer.one_shot = true
 		attack_timer.connect("timeout", _on_attack_finished)
 		add_child(attack_timer)
 		attack_timer.start()
-
+		attack(spell_scene)
 func _on_attack_finished():
 	is_attacking = false
 		

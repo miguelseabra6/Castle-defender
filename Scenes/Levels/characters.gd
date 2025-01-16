@@ -48,8 +48,38 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("change"):
 		print("Leader change requested.")
 		change_leader()
+	elif event.is_action_pressed("change_mage"):
+		print("Changing leader to a Mage...")
+		change_leader_to(Mage)
+	elif event.is_action_pressed("change_knight"):
+		print("Changing leader to a Knight...")
+		change_leader_to(Knight)
 
-# Change to the next knight in the list
+
+# Change the leader to the next character of the specified type
+func change_leader_to(target_type):
+	var chars = null
+	if target_type == Mage:
+		chars = get_chars().filter(func(char):
+			return char is Mage
+		)
+	elif target_type == Knight:
+		chars = get_chars().filter(func(char):
+			return char is Knight
+		)
+
+	if chars.size() == 0:
+		print("No characters of type", target_type, "available.")
+		return
+
+	var current_index = chars.find(leader)
+	var next_index = (current_index + 1) % chars.size()
+
+	set_leader(chars[next_index])
+	
+	
+	
+# Change to the next sin the list
 func change_leader():
 	var chars = get_chars()
 	if chars.size() <= 1:

@@ -12,8 +12,8 @@ func _on_body_entered(body: Node) -> void:
 	if body.is_in_group("enemy_mages"):
 		body._on_slow()
 		body._on_hurt(3)
+		queue_free()
 	if body.is_in_group("enemy_knights"):
 		body._on_slow()
 		body._on_hurt(5)
-
-	queue_free()
+		queue_free()

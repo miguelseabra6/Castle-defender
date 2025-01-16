@@ -13,6 +13,7 @@ class_name Enemy_Knight
 @onready var state_machine = $AnimationTree["parameters/playback"]
 @onready var model = $Rig
 @export var attack_range = 2.0
+@onready var vulnerable = false
 @onready var helmet = get_node("Rig/Skeleton3D/Knight_Helmet/Knight_Helmet")
 
 var is_attacking = false
@@ -152,8 +153,14 @@ func _on_attack_finished():
 	attack_in_progress = false
 
 func _on_hurt(damage: int) -> void:
-	$Health.take_damage(damage)
+	if !vulnerable :
+		$Health.take_damage(damage)
+	else:
+		$Health.take_damage(damage * 2)
 
+
+func _on_vulnerable():
+	vulnerable = true
 func _on_slow():
 	speed = 2
 	var timer = Timer.new()
