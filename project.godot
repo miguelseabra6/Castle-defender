@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Jogo"
-run/main_scene="res://Scenes/Levels/map_1.tscn"
+run/main_scene="res://Scenes/Levels/map_2.tscn"
 config/features=PackedStringArray("4.3", "Forward Plus")
 config/icon="res://icon.svg"
 
@@ -19,9 +19,9 @@ config/icon="res://icon.svg"
 
 enabled=PackedStringArray()
 
-[filesystem]
+[global_group]
 
-import/blender/enabled=false
+doors=""
 
 [input]
 

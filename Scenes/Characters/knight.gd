@@ -39,6 +39,12 @@ var player_units = null
 var self_index = self.get_index()
 
 func _ready():
+	var material = helmet.get_surface_override_material(0)
+	if not material:
+		material = StandardMaterial3D.new()
+		helmet.set_surface_override_material(0, material)
+	
+	material.albedo_color = Color(1, 1, 1)
 	$AnimationPlayer.connect("animation_finished", _on_attack_animation_finished)
 	died.connect(get_parent()._on_character_died)
 	player_units = get_parent().get_children()
@@ -110,7 +116,7 @@ func _unhandled_input(event):
 func _input(delta):
 	if is_leader:
 		if Input.is_action_pressed("attack"):
-			print("attack")
+
 			attack_enemy()
 		# Check if the right mouse button (block) is being pressed
 		if Input.is_action_pressed("block"):
@@ -244,15 +250,13 @@ func _physics_process(delta):
 		
 	else:
 		update_target_enemy()
-
+		
 		if target_enemy:
 			move_towards_enemy(delta)
 		else:
 			
 			follow_leader(delta)
-		
-
-
+			
 	move_and_slide()
 	
 	if velocity.length() > 1.0:
@@ -282,20 +286,16 @@ var damage_amount = 5
 var i = 0
 
 func _on_hurt(damage: int) -> void:
-	#i += 0.1
-	#var material = helmet.get_surface_override_material(0)
-	#if not material:
-		#material = StandardMaterial3D.new()
-		#helmet.set_surface_override_material(0, material)
-	#var red = 1.0  # Clamp red between 0 and 1
-	#var green = max(1 - i, 0)  # Reduce green over time
-	#var blue = max(1 - i, 0)  # Reduce blue over time
-#
-	#material.albedo_color = Color(red, green, blue)
 	$Health.take_damage(damage)
 
-
-	
+func _on_low_health():
+	if not is_leader and target_enemy:
+		var enemy_pos = target_enemy.global_transform.origin
+		var direction_away_from_enemy = (global_transform.origin - enemy_pos ).normalized()
+		var distance_to_enemy = global_transform.origin.distance_to(enemy_pos)
+		
+		velocity.x = direction_away_from_enemy.x * (speed + 1)
+		velocity.z = direction_away_from_enemy.z * (speed + 1)
 
 signal spawn
 
@@ -314,14 +314,15 @@ func _on_sword_area_entered(body : Area3D) -> void:
 
 
 	if body.is_in_group("hurt_boxes"):
+		print("hurting")
 		body.get_parent()._on_hurt(5)
 		
 var target_enemy = null
-@export var detection_range = 3.0
+@export var detection_range = 4.0
 @export var attack_range = 2.0
 
 func update_target_enemy():
-	var enemies = get_parent().get_parent().get_parent().get_node("Enemies").get_children()  # Adjust path to your enemy group
+	var enemies = get_parent().get_parent().get_parent().get_node("Spawners").get_children()  # Adjust path to your enemy group
 	var closest_distance = detection_range
 	target_enemy = null
 

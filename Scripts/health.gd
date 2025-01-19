@@ -5,7 +5,6 @@ extends Node
 signal died
 
 func take_damage(damage : int):
-	print("omg")
 	hp = clamp(hp - damage, 0, max_hp)
 	if hp <= 0:
 		died.emit()
