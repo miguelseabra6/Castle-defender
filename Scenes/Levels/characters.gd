@@ -27,9 +27,9 @@ func set_leader(new_leader):
 	leader.is_leader = true
 	leader._on_changed()
 	if leader is Mage:
-		get_tree().root.get_child(0).get_node("TextureRect").visible = true
+		get_parent().get_node("TextureRect").visible = true
 	else:
-		get_tree().root.get_child(0).get_node("TextureRect").visible = false
+		get_parent().get_node("TextureRect").visible = false
 		
 	for child in get_children():
 		if child != leader and is_instance_valid(child):
@@ -102,6 +102,8 @@ func _on_character_died(character):
 	print("Someone died.", character)
 	if character == leader:
 		update_leader()
+	if get_chars().size() <= 0:
+		SceneHandler.go_to_menu()
 
 # Update the leader knight
 func update_leader():
@@ -128,9 +130,9 @@ func _on_enemy_died(enemy_type: String) -> void:
 
 	print("Enemy killed! Total kills:", enemy_kill_count)
 
-	if enemy_kill_count % 5 == 0:
+	if enemy_kill_count % 8 == 0:
 		spawn_mage()
-	elif enemy_kill_count % 2 == 0:
+	elif enemy_kill_count % 4 == 0:
 		spawn_knight()
 
 # Spawn a knight

@@ -15,6 +15,10 @@ run/main_scene="res://Scenes/Levels/map_2.tscn"
 config/features=PackedStringArray("4.3", "Forward Plus")
 config/icon="res://icon.svg"
 
+[autoload]
+
+SceneHandler="*res://Scripts/scene_handler.gd"
+
 [editor_plugins]
 
 enabled=PackedStringArray()
@@ -22,6 +26,7 @@ enabled=PackedStringArray()
 [global_group]
 
 doors=""
+target_points=""
 
 [input]
 

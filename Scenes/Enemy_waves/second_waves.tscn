@@ -1,0 +1,30 @@
+[gd_scene load_steps=3 format=3 uid="uid://cew63vmlwwr0d"]
+
+[ext_resource type="Script" path="res://Scripts/knight_spawner.gd" id="1_v8841"]
+[ext_resource type="PackedScene" uid="uid://ci5qayd6dan3l" path="res://Scenes/Characters/invading_knight.tscn" id="2_cu2cd"]
+
+[node name="First Waves" type="Node3D"]
+
+[node name="KnightSpawner" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.699, 0)
+script = ExtResource("1_v8841")
+enemy_scene = ExtResource("2_cu2cd")
+spawn_time = 10.0
+
+[node name="KnightSpawner2" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.699, 0)
+script = ExtResource("1_v8841")
+enemy_scene = ExtResource("2_cu2cd")
+spawn_time = 10.0
+
+[node name="KnightSpawner3" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.699, 0)
+script = ExtResource("1_v8841")
+enemy_scene = ExtResource("2_cu2cd")
+spawn_time = 10.0
+
+[node name="KnightSpawner4" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.699, 0)
+script = ExtResource("1_v8841")
+enemy_scene = ExtResource("2_cu2cd")
+spawn_time = 10.0

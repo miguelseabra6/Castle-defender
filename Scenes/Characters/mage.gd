@@ -134,6 +134,10 @@ func get_leader_rotation():
 		return Vector3(0, rad_to_deg(rotation_y), 0)
 	return leader_knight.get_rotation_degrees()
 	
+
+@export var spell_range: float = 20.0  # Maximum range to detect enemies
+@export var spell_cooldown: float = 3.0  # Time between spell casts
+var spell_timer: float = 0.0  # Timer to track cooldown
 func follow_leader(delta):
 	var knights = []
 	for child in get_parent().get_children():
@@ -198,8 +202,30 @@ func follow_leader(delta):
 			velocity.z = 0
 	var vl = velocity * model.transform.basis
 	anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
+	
+	spell_timer -= delta
+	if spell_timer <= 0:
+		spell_timer = spell_cooldown
+		shoot_at_nearest_enemy()
 
+func shoot_at_nearest_enemy():
+	var nearest_enemy = null
+	var shortest_distance = spell_range
 
+	for enemy in get_parent().get_parent().get_node("Spawners").get_children():
+		if enemy is Invading_Knight or enemy is Invading_Mage or enemy is Strong_Invading_Knight: # Replace with your enemy class name
+			var distance = global_transform.origin.distance_to(enemy.global_transform.origin)
+			if distance < shortest_distance:
+				nearest_enemy = enemy
+				shortest_distance = distance
+
+	if nearest_enemy:
+		var new_spell  = spell_scene.instantiate()
+		get_tree().root.add_child(new_spell)
+		var tip = get_node("Rig/Skeleton3D/2H_Staff/tip")
+		new_spell.global_position = tip.global_position
+		var direction = (nearest_enemy.global_position - new_spell.global_position).normalized()
+		new_spell.set("direction", direction)  # Pass the direction to the spell
 
 func _physics_process(delta):
 	velocity.y += -gravity * delta
@@ -249,6 +275,7 @@ func attack(spell:PackedScene):
 	# Calculate a direction vector from the spell's position to the target position
 		var adjusted_direction = (target_position - new_spell.global_position).normalized()
 		new_spell.set("direction", adjusted_direction)  # Pass the direction to the spell
+
 
 func attack_default():
 	if not is_attacking:

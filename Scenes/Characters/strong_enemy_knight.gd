@@ -39,7 +39,7 @@ var attacks = [
 
 func _ready():
 	direction = get_random_direction()
-	var char_manager = get_parent().get_parent().get_node("Player Units").get_children()[0]
+	var char_manager = get_parent().get_parent().get_node("Player Units")
 	died.connect(char_manager._on_enemy_died)
 	# Change the helmet color to red
 	var material = helmet.get_surface_override_material(0)

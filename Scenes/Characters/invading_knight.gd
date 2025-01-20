@@ -1,21 +1,21 @@
 extends CharacterBody3D
 class_name Invading_Knight
 
-@export var speed = 5
+@export var speed = 4
 @export var acceleration = 2.0
 @onready var spawn = global_position
 @onready var area_min = spawn + Vector3(-5, 0, -5)  # Minimum corner of the walking area
 @onready var area_max = spawn + Vector3(0, 0, 0)   # Maximum corner of the walking area
 @export var change_direction_interval = 2.0  # How often to change direction (in seconds)
 @export var idle_chance = 0.3  # Chance to idle when changing direction (0.0 to 1.0)
-@export var detection_range = 3.0
+@export var detection_range = 4.0
 @onready var anim_tree = $AnimationTree
 @onready var state_machine = $AnimationTree["parameters/playback"]
 @onready var model = $Rig
 @export var attack_range = 2.0
 @onready var vulnerable = false
 @onready var helmet = get_node("Rig/Skeleton3D/Knight_Helmet/Knight_Helmet")
-
+@onready var castle_script = get_parent().get_parent().get_node("castle")
 var is_attacking = false
 var target_player = null
 var direction = Vector3.ZERO
@@ -35,7 +35,7 @@ var attacks = [
 
 func _ready():
 	direction = get_random_direction()
-	var char_manager = get_parent().get_parent().get_node("Player Units").get_children()[0]
+	var char_manager = get_parent().get_parent().get_node("Player Units")
 	died.connect(char_manager._on_enemy_died)
 	# Change the helmet color to red
 	var material = helmet.get_surface_override_material(0)
@@ -58,43 +58,128 @@ func _physics_process(delta):
 		
 		if distance_to_player <= 5.0:
 			# Move toward player if within 5 units
+			attacking_wall = false
 			move_towards_player(delta)
 		else:
 			# Move toward door otherwise
 			move_towards_door(delta)
 	else:
 		# No player in range, move toward the door
-		move_towards_door(delta)
-
+		move_straight(delta)
+	var vl = velocity * model.transform.basis
+	anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
 	# Move character
 	move_and_slide()
 
 
+
+@onready var raycast = $RayCast3D
+var attacking_wall = false
+var avoiding = false  # Track if the knight is currently avoiding
+
+func move_straight(delta):
+	# Check if attacking
+	if attack_in_progress:
+		velocity.x = 0
+		velocity.z = 0
+		var vl = velocity * model.transform.basis
+		anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
+		return
+
+	# If avoiding, maintain the sideways movement
+	if avoiding:
+		velocity.z = 0  # Stop forward movement
+	else:
+		velocity.z = -speed  # Move forward
+
+	# Check for obstacles using RayCast3D
+	if raycast.is_colliding() and not avoiding:
+		var collider = raycast.get_collider()
+		if collider.is_in_group("enemy_knights"):  # Detect other enemies
+			# Start avoidance
+			avoiding = true
+			velocity.x = speed  # Move to the side
+			var timer = Timer.new()
+			timer.wait_time = 3.0
+			timer.one_shot = true
+			timer.connect("timeout", _on_avoid_timer_finished)
+			add_child(timer)
+			timer.start()
+
+	# Update animation for movement
+	var vl = velocity * model.transform.basis
+	anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
+	
+	# Rotate model to face forward
+	if not avoiding:
+		var target_rotation_y = atan2(0, -1)
+		model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, delta * 10.0)
+		
+
+	# Check for collision with a wall
+	if is_on_wall() and not avoiding:
+		velocity.z = 0
+		vl = velocity * model.transform.basis
+		anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
+		if not attack_in_progress:
+			attack_wall()
+
+
+func rotate_model_towards_direction(direction: Vector3, delta: float):
+	if direction != Vector3.ZERO:
+		var target_rotation_y = atan2(direction.x, direction.z)
+		model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, delta * 10.0)
+
+func _on_avoid_timer_finished():
+	# Stop avoiding
+	avoiding = false
+	velocity.x = 0  # Stop sideways movement
+func avoid_obstacle(delta):
+	# Adjust velocity to move around the obstacle
+	# Choose a side to move toward, e.g., left or right
+	var side_step = global_transform.basis.x * (speed * 0.5)  # Step sideways
+
+	# Randomly pick left or right if not previously decided
+	if randf() < 0.5:
+		velocity += side_step  # Move right
+	else:
+		velocity -= side_step  # Move left
+
+	# Adjust rotation to face the new direction
+	
+	
+
 func update_target_door():
 	# Get all doors
-	var towers = get_parent().get_parent().get_node("towers").get_children()
-	
+	var castle = get_parent().get_parent().get_node("castle").get_children()
+	var markers = []
+
+	for marker in castle:
+		if marker is Marker3D:
+			markers.append(marker)
 	# Initialize variables to track the closest door
 	var closest_distance = null
-	var closest_tower = null
+	var closest_marker = null
 	
 	# Position of the current object (e.g., character or player)
 	var current_position = global_transform.origin
 	
 	# Iterate through the doors to find the closest one
-	for tower in towers:
+	for marker in markers:
+	
 		# Ensure the door is a valid Node3D with a global position
 	
-		var tower_position = tower.global_transform.origin
-		var distance = current_position.distance_to(tower_position)
+		var marker_position = marker.global_transform.origin
+		var distance = current_position.distance_to(marker_position)
 			
 			# Update the closest door and distance if necessary
-		if closest_distance == null or distance < closest_distance:
+		if (closest_distance == null or distance < closest_distance):
 			closest_distance = distance
-			closest_tower = tower
-	
+			closest_marker = marker
+
 	# Set the target_door to the closest door
-	target_door = closest_tower.get_node("door").get_node("CollisionShape3D")
+	target_door = closest_marker
+
 	
 
 func move_towards_door(delta):
@@ -121,8 +206,10 @@ func move_towards_door(delta):
 		if not attack_in_progress:
 			attack()
 
+
+
 func update_target_player():
-	var player_units = get_parent().get_parent().get_node("Player Units").get_children()[0].get_children()
+	var player_units = get_parent().get_parent().get_node("Player Units").get_children()
 	var closest_distance = detection_range
 	target_player = null
 
@@ -184,12 +271,6 @@ func get_random_direction() -> Vector3:
 	var target_position = Vector3(random_x, global_transform.origin.y, random_z)
 	return (target_position - global_transform.origin).normalized()
 
-func rotate_model_towards_direction(direction: Vector3, delta: float):
-	if direction != Vector3.ZERO:
-		var target_rotation_y = atan2(direction.x, direction.z)
-		model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, delta * 10.0)
-		
-
 
 func attack():
 
@@ -199,6 +280,22 @@ func attack():
 	var direction_to_target = (target.global_transform.origin - global_transform.origin).normalized()
 	rotate_model_towards_direction(direction_to_target, get_process_delta_time())
 
+	# Set up a timer to finish the attack
+	var timer = Timer.new()
+	timer.wait_time = 3.0
+	timer.one_shot = true
+	timer.connect("timeout", _on_attack_finished)
+	add_child(timer)
+	timer.start()
+	state_machine.travel(random_attack)
+
+
+func attack_wall():
+
+	var random_attack = attacks.pick_random()
+	var direction_to_target = Vector3(0,0,1)
+	rotate_model_towards_direction(direction_to_target, get_process_delta_time())
+	
 	# Set up a timer to finish the attack
 	var timer = Timer.new()
 	timer.wait_time = 3.0
@@ -259,7 +356,10 @@ func _on_sword_area_entered(body: Area3D) -> void:
 		return
 
 	attack_in_progress = true
-
+	if (avoiding == true):
+		if body.is_in_group("target_points"):
+			print("attacked castle")
+		
 	if body.is_in_group("player_hurt_boxes"):
 		var player = body.get_parent()
 
@@ -278,3 +378,10 @@ func _on_sword_area_entered(body: Area3D) -> void:
 		else:
 			print("Player hit!")
 			player._on_hurt(5)
+
+
+func _on_sword_body_entered(body: Node3D) -> void:
+
+	if body.is_in_group("target_points"):
+
+		body._on_hurt(5)

@@ -1,15 +1,19 @@
-[gd_scene load_steps=2 format=3 uid="uid://7bn5yfh63556"]
+[gd_scene load_steps=4 format=3 uid="uid://7bn5yfh63556"]
 
 [ext_resource type="PackedScene" uid="uid://dm6uihhq1ocrg" path="res://Scenes/Objects/wall.tscn" id="1_r743v"]
+[ext_resource type="Script" path="res://Scenes/Objects/long_wall.gd" id="1_smjw8"]
 
-[node name="Node3D" type="Node3D"]
+[sub_resource type="BoxShape3D" id="BoxShape3D_nk5fd"]
+size = Vector3(30.8, 4.1, 0.6)
+
+[node name="long_wall" type="StaticBody3D" groups=["target_points"]]
+script = ExtResource("1_smjw8")
 
 [node name="wall" parent="." instance=ExtResource("1_r743v")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.04212, 0, 0)
 
 [node name="wall2" parent="." instance=ExtResource("1_r743v")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.84212, 0, 0)
-constant_linear_velocity = Vector3(2, 0, 0)
 
 [node name="wall3" parent="." instance=ExtResource("1_r743v")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.64212, 0, 0)
@@ -28,3 +32,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.8421, 0, 0)
 
 [node name="wall8" parent="." instance=ExtResource("1_r743v")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28.6421, 0, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.2798, 1.97782, 0.000124514)
+shape = SubResource("BoxShape3D_nk5fd")

@@ -1,6 +1,7 @@
-[gd_scene load_steps=37 format=4 uid="uid://cvmu0diutqbhi"]
+[gd_scene load_steps=38 format=4 uid="uid://cvmu0diutqbhi"]
 
 [ext_resource type="PackedScene" uid="uid://c2iaqe67ppkp3" path="res://Scenes/Utils/health.tscn" id="1_4hrwd"]
+[ext_resource type="Script" path="res://Scenes/Objects/tower.gd" id="1_q2ur2"]
 [ext_resource type="Script" path="res://Scenes/Objects/door.gd" id="1_s4ddo"]
 [ext_resource type="Script" path="res://Scenes/Utils/health_door.gd" id="3_j0pu4"]
 
@@ -447,8 +448,9 @@ shadow_mesh = SubResource("ArrayMesh_ujg0v")
 [sub_resource type="BoxShape3D" id="BoxShape3D_2k7q0"]
 size = Vector3(0.1, 1.1, 0.85)
 
-[node name="Low_Poly_Tower" type="StaticBody3D"]
+[node name="Low_Poly_Tower" type="StaticBody3D" groups=["target_points"]]
 transform = Transform3D(0.923271, 0, -0.38415, 0, 1, 0, 0.38415, 0, 0.923271, 0, 1.73268, 0)
+script = ExtResource("1_q2ur2")
 
 [node name="Tower" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.764679, 0, 0, 0, 1, 0, -0.28725, 0)
@@ -509,7 +511,7 @@ transform = Transform3D(-0.160319, -0.000229902, -0.124306, -0.000217644, 0.1022
 mesh = SubResource("ArrayMesh_kwcq3")
 skeleton = NodePath("")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="door"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="door" groups=["target_points"]]
 transform = Transform3D(0.92706, 0, 0.374914, 0, 1, 0, -0.374914, 0, 0.92706, 0.798158, -0.902521, -0.33074)
 shape = SubResource("BoxShape3D_2k7q0")
 

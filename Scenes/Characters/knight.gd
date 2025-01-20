@@ -48,9 +48,9 @@ func _ready():
 	$AnimationPlayer.connect("animation_finished", _on_attack_animation_finished)
 	died.connect(get_parent()._on_character_died)
 	player_units = get_parent().get_children()
-	for child in get_parent().get_parent().get_parent().get_node("Enemies").get_children():
-		if child.is_in_group("enemies"):
-			hurt.connect(child._on_hurt)
+	#for child in get_parent().get_parent().get_node("Enemies").get_children():
+		#if child.is_in_group("enemies"):
+			#hurt.connect(child._on_hurt)
 	
 		
 	
@@ -311,8 +311,9 @@ func _on_sword_area_entered(body : Area3D) -> void:
 	if attack_in_progress:
 		return
 	attack_in_progress = true
-
-
+	print(body)
+	if body.is_in_group("target_points"):
+		print("attacked castle")
 	if body.is_in_group("hurt_boxes"):
 		print("hurting")
 		body.get_parent()._on_hurt(5)
@@ -322,7 +323,13 @@ var target_enemy = null
 @export var attack_range = 2.0
 
 func update_target_enemy():
-	var enemies = get_parent().get_parent().get_parent().get_node("Spawners").get_children()  # Adjust path to your enemy group
+	var all_enemies = get_parent().get_parent().get_node("Spawners").get_children()  # Adjust path to your enemy group
+	var enemies = []  # Create a new list for filtered enemies
+
+	# Filter the enemies manually
+	for enemy in all_enemies:
+		if enemy is Invading_Knight or enemy is Invading_Mage or enemy is Strong_Invading_Knight:
+			enemies.append(enemy)
 	var closest_distance = detection_range
 	target_enemy = null
 
@@ -362,7 +369,7 @@ func attack_enemy():
 
 	var random_attack = attacks.pick_random()
 	var timer = Timer.new()
-	timer.wait_time = 0.8
+	timer.wait_time = 1
 	timer.one_shot = true
 	timer.connect("timeout",_on_attack_animation_finished)
 	add_child(timer)
