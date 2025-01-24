@@ -11,6 +11,11 @@ func take_damage(damage : int):
 	if hp <= 0:
 		died.emit()
 
+func heal(ammount : int):
+	hp = clamp(hp + ammount, 0, max_hp)
+	update_color_based_on_health()  # Update color based on new health value
+
+
 func update_color_based_on_health():
 	if helmet:  # Ensure the helmet reference exists
 		var material = helmet.get_surface_override_material(0)

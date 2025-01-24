@@ -27,7 +27,7 @@ var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 @export var rotation_speed = 12.0
 var safe_spot: Vector3
 
-signal died(String)
+signal died()
 
 func _ready():
 	var char_manager = get_parent().get_parent().get_node("Player Units")
@@ -38,6 +38,13 @@ func _ready():
 		material = StandardMaterial3D.new()
 		helmet.set_surface_override_material(0, material)
 	material.albedo_color = Color(1, 0, 0)
+
+func _process(_delta):
+	# Check if the character's z position has crossed the threshold
+	if global_position.z < 65:
+	# Add Layer 6
+		set_collision_layer(get_collision_layer() | (1 << 5))
+		set_collision_mask(get_collision_mask() | (1 << 5))
 
 
 func _physics_process(delta):
@@ -55,8 +62,8 @@ func _physics_process(delta):
 
 
 
-func move_straight(delta):
-	# Check if attacking
+func move_straight(_delta):
+
 	
 		velocity.z = speed  # Move forward
 
@@ -85,7 +92,7 @@ func retreat_and_follow_wall(delta, player_pos):
 	velocity.z = retreat_direction.z * speed 
 	
 	if back_raycast.is_colliding():
-		var collision_normal = back_raycast.get_collision_normal()
+	
 		# Move in a perpendicular direction if colliding with a wall
 		var perpendicular_direction = Vector3(-retreat_direction.z, 0, retreat_direction.x)
 		velocity.x = perpendicular_direction.x * speed
@@ -137,7 +144,7 @@ func attack():
 		spell.set("direction", direction_to_target)
 
 		var attack_timer = Timer.new()
-		attack_timer.wait_time = 1.0
+		attack_timer.wait_time = 2.0
 		attack_timer.one_shot = true
 		attack_timer.connect("timeout", _on_attack_finished)
 		add_child(attack_timer)
@@ -174,7 +181,7 @@ func _on_health_died():
 
 func _on_death_timer_finished():
 	queue_free()
-	died.emit("Mage")
+	died.emit()
 
 func update_target_player():
 	var player_units = get_parent().get_parent().get_node("Player Units").get_children()

@@ -1,0 +1,14 @@
+[gd_scene load_steps=5 format=3 uid="uid://cnw2s4w243615"]
+
+[ext_resource type="Script" path="res://spawner2.gd" id="1_diiib"]
+[ext_resource type="PackedScene" uid="uid://ci5qayd6dan3l" path="res://Scenes/Characters/invading_knight.tscn" id="2_jlmkd"]
+[ext_resource type="PackedScene" uid="uid://cbtfh6x4asvp7" path="res://Scenes/Characters/invading_mage.tscn" id="3_lpse3"]
+[ext_resource type="PackedScene" uid="uid://cj3mres2orbdf" path="res://Scenes/Characters/strong_invading_knight.tscn" id="4_ffuaf"]
+
+[node name="Node3D" type="Node3D"]
+
+[node name="Marker3D" type="Marker3D" parent="."]
+script = ExtResource("1_diiib")
+knight_scene = ExtResource("2_jlmkd")
+mage_scene = ExtResource("3_lpse3")
+strong_knight_scene = ExtResource("4_ffuaf")

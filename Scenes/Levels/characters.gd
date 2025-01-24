@@ -20,13 +20,16 @@ func _ready() -> void:
 
 # Set a new leader knight
 func set_leader(new_leader):
+	
 	if leader and is_instance_valid(leader):
 		leader.is_leader = false
-
+		if leader is Mage:
+			leader.get_node("HUD").visible = false
 	leader = new_leader
 	leader.is_leader = true
 	leader._on_changed()
 	if leader is Mage:
+		leader.get_node("HUD").visible = true
 		get_parent().get_node("TextureRect").visible = true
 	else:
 		get_parent().get_node("TextureRect").visible = false
@@ -40,9 +43,13 @@ func set_leader(new_leader):
 # Get all alive knights
 func get_chars() -> Array:
 	return get_children().filter(func(char):
+		return is_instance_valid(char) and not char.stationary
+	)
+	
+func get_all_chars() -> Array:
+	return get_children().filter(func(char):
 		return is_instance_valid(char)
 	)
-
 # Handle leader change input
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("change"):
@@ -54,6 +61,18 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_pressed("change_knight"):
 		print("Changing leader to a Knight...")
 		change_leader_to(Knight)
+	elif event.is_action_pressed("stationary"):
+		print("Leader change requested.")
+		change_leader()
+	elif event.is_action_pressed("regroup"):
+		print("Regrouping characters...")
+		regroup_characters()
+
+func regroup_characters() -> void:
+	var characters = get_all_chars()
+	for char in characters:
+		char.stationary = false
+		
 
 
 # Change the leader to the next character of the specified type
@@ -82,7 +101,14 @@ func change_leader_to(target_type):
 # Change to the next sin the list
 func change_leader():
 	var chars = get_chars()
-	if chars.size() <= 1:
+	print(chars.size())
+	var all_chars = get_all_chars()
+	if all_chars.size() <= 1:
+		return  # Do nothing if only one knight remains
+	if chars.size() <= 0:
+		leader.stationary = false
+		return
+	if chars.size() <= 1 and not leader.stationary :
 		return  # Do nothing if only one knight remains
 
 	var current_index = chars.find(leader)
@@ -125,16 +151,20 @@ func update_leader():
 		print("No knights remaining.")
 
 # Handle enemy death and spawn characters accordingly
-func _on_enemy_died(enemy_type: String) -> void:
+func _on_enemy_died() -> void:
 	enemy_kill_count += 1
 
 	print("Enemy killed! Total kills:", enemy_kill_count)
 
-	if enemy_kill_count % 8 == 0:
+	if enemy_kill_count % 10 == 0:
 		spawn_mage()
-	elif enemy_kill_count % 4 == 0:
+	#elif enemy_kill_count % 7 == 0:
+		#spawn_knight()
+
+func _on_wave_cleared(wave: int):
 		spawn_knight()
 
+		
 # Spawn a knight
 func spawn_knight():
 	if knight_scene:

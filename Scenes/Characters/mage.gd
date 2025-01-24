@@ -4,10 +4,11 @@ class_name Mage
 @export var spell_scene : PackedScene  = ResourceLoader.load("res://Scenes/Utils/spell.tscn")
 @export var spell_slow : PackedScene  = ResourceLoader.load("res://Scenes/Utils/spell_slow.tscn")
 @export var spell_vulnerable : PackedScene  = ResourceLoader.load("res://Scenes/Utils/spell_vulnerable.tscn")
-@export var speed = 5.0
+@export var spell_heal : PackedScene  = ResourceLoader.load("res://Scenes/Utils/spell_heal.tscn")
+@export var speed = 6.0
 @export var acceleration = 4.0
 @export var jump_speed = 8.0
-
+@onready var mana_bar = $HUD/ManaBar
 
 var jumping = false
 
@@ -29,10 +30,27 @@ var leader_knight = null
 @export var is_leader = false
 
 var is_attacking = false
-signal changed
-signal changed_other
+
 var player_units = null
 var self_index = self.get_index()
+
+@export var max_mana: int = 100  # The maximum mana the mage can have
+var current_mana: int = max_mana  # The current mana the mage has
+@export var mana_regeneration_rate: float = 5.0  # Mana regenerated per second
+
+func use_mana(amount: int) -> bool:
+	if current_mana >= amount:
+		current_mana -= amount
+		return true  # Mana successfully used
+	else:
+		print("Not enough mana!")
+		return false  # Not enough mana
+
+func _process(delta):
+	# Update the mana bar
+	mana_bar.value = current_mana
+	mana_bar.max_value = max_mana
+	
 func _ready():
 	died.connect(get_parent()._on_character_died)
 	player_units = get_parent().get_children()
@@ -64,8 +82,9 @@ func get_attack_duration(attack: String) -> float:
 		"1H_Melee_Attack_Slice_Diagonal": return 1
 		_: return 1
 var is_blocking = false
+var stationary = false
 
-signal hit
+
 @onready var camera = $SpringArm3D/Camera3D
 @onready var ray_cast = $SpringArm3D/Camera3D/RayCast3D
 @export var bullet_speed = 70.0
@@ -83,13 +102,35 @@ func _unhandled_input(event):
 			attack_slow()
 		elif event.is_action_pressed("spell_vulnerable"):
 			attack_vulnerable()
+		elif event.is_action_pressed("spell_heal"):
+			heal()
 		elif event.is_action_pressed("zoom_in"):
 			spring_arm.spring_length = clamp(spring_arm.spring_length - 1, min_length, max_length)
 
 		elif event.is_action_pressed("zoom_out"):
 			spring_arm.spring_length = clamp(spring_arm.spring_length + 1, min_length, max_length)
-
+		elif event.is_action_pressed("charge"):
+ # Check if the RayCast3D is colliding
+			if ray_cast.is_colliding():
+				var collided_object = ray_cast.get_collider()
 			
+			# Ensure the collider is an enemy mage
+				if collided_object and (collided_object.is_in_group("enemy_mages") or collided_object.is_in_group("enemy_knights")):
+					var enemy = collided_object
+				
+				# Find the closest knight
+					var closest_knight = find_knight_closest_to(enemy)
+				
+				# If a knight is found, call its _on_charge method
+					if closest_knight:
+						closest_knight._on_charge(enemy)
+					else:
+						print("No knights found to handle charge.")
+				else:
+					print("Ray did not hit an enemy mage.")
+			else:
+				print("RayCast is not colliding.")
+						
 			
 		
 
@@ -104,22 +145,22 @@ func get_move_input(delta):
 	velocity = lerp(velocity, dir * speed, acceleration * delta)
 	var vl = velocity * model.transform.basis
 	anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
-	if is_on_floor() and Input.is_action_just_pressed("jump"):
-		velocity.y = jump_speed
-		jumping = true
-		anim_tree.set("parameters/conditions/grounded", false)
-		anim_tree.set("parameters/conditions/jumping", true)
-	# We just hit the floor after being in the air
-	if is_on_floor() and not last_floor:
-		jumping = false
-		anim_tree.set("parameters/conditions/jumping", false)
-		anim_tree.set("parameters/conditions/grounded", true)
-	
-	if not is_on_floor() and not jumping:
-		state_machine.travel("Jump_Idle")
-		anim_tree.set("parameters/conditions/grounded", false)
-	last_floor = is_on_floor()
-	
+	#if is_on_floor() and Input.is_action_just_pressed("jump"):
+		#velocity.y = jump_speed
+		#jumping = true
+		#anim_tree.set("parameters/conditions/grounded", false)
+		#anim_tree.set("parameters/conditions/jumping", true)
+	## We just hit the floor after being in the air
+	#if is_on_floor() and not last_floor:
+		#jumping = false
+		#anim_tree.set("parameters/conditions/jumping", false)
+		#anim_tree.set("parameters/conditions/grounded", true)
+	#
+	#if not is_on_floor() and not jumping:
+		#state_machine.travel("Jump_Idle")
+		#anim_tree.set("parameters/conditions/grounded", false)
+	#last_floor = is_on_floor()
+	#
 @export var horizontal_offset = 3.0  # Spread between mages
 @export var follow_distance = 10.0  # Distance behind the leader
 
@@ -229,6 +270,8 @@ func shoot_at_nearest_enemy():
 
 func _physics_process(delta):
 	velocity.y += -gravity * delta
+	  # Regenerate mana
+	current_mana = min(current_mana + mana_regeneration_rate * delta, max_mana)
 	if is_leader:
 		# Standard control logic for the leader knight
 		
@@ -253,17 +296,18 @@ func attack(spell:PackedScene):
 		new_spell = spell_slow.instantiate()
 	elif spell == spell_vulnerable:
 		new_spell = spell_vulnerable.instantiate()
+	elif spell == spell_heal:
+		new_spell = spell_heal.instantiate()
 	get_tree().root.add_child(new_spell)
 	var tip = get_node("Rig/Skeleton3D/2H_Staff/tip")
-	new_spell.global_position = tip.global_position # Offset to spawn in front of the camera
+	new_spell.global_position = tip.global_position
  
 # Get the forward direction of the camera
 	ray_cast.target_position = Vector3(0, 0, 100)
 	if ray_cast.is_colliding():
 # Get the collision point
 		var collision_point = ray_cast.get_collision_point()
-# Get the object that was hit
-		var hit_object = ray_cast.get_collider()
+
 # Set the spell's movement direction toward the collision point
 		var direction = (collision_point - new_spell.global_position).normalized()
 		new_spell.set("direction", direction)  # Pass the direction to the spell
@@ -277,8 +321,13 @@ func attack(spell:PackedScene):
 		new_spell.set("direction", adjusted_direction)  # Pass the direction to the spell
 
 
+@export var default_spell_mana_cost: int = 5
+@export var slow_spell_mana_cost: int = 5
+@export var vulnerable_spell_mana_cost: int = 10
+@export var heal_spell_mana_cost: int = 10
+
 func attack_default():
-	if not is_attacking:
+	if not is_attacking and use_mana(default_spell_mana_cost):  # Check if there's enough mana
 		state_machine.travel("Spellcast_Shoot")
 		is_attacking = true
 		var attack_timer = Timer.new()
@@ -288,12 +337,9 @@ func attack_default():
 		add_child(attack_timer)
 		attack_timer.start()
 		attack(spell_scene)
-func _on_attack_finished():
-	is_attacking = false
-		
-		
+
 func attack_slow():
-	if not is_attacking:
+	if not is_attacking and use_mana(slow_spell_mana_cost):  # Check if there's enough mana
 		state_machine.travel("Spellcast_Shoot")
 		is_attacking = true
 		var attack_timer = Timer.new()
@@ -305,7 +351,7 @@ func attack_slow():
 		attack(spell_slow)
 
 func attack_vulnerable():
-	if not is_attacking:
+	if not is_attacking and use_mana(vulnerable_spell_mana_cost):  # Check if there's enough mana
 		state_machine.travel("Spellcast_Shoot")
 		is_attacking = true
 		var attack_timer = Timer.new()
@@ -315,12 +361,27 @@ func attack_vulnerable():
 		add_child(attack_timer)
 		attack_timer.start()
 		attack(spell_vulnerable)
+
+func heal():
+	if not is_attacking and use_mana(heal_spell_mana_cost):  # Check if there's enough mana
+		state_machine.travel("Spellcast_Shoot")
+		is_attacking = true
+		var attack_timer = Timer.new()
+		attack_timer.wait_time = 1.0
+		attack_timer.one_shot = true
+		attack_timer.connect("timeout", _on_attack_finished)
+		add_child(attack_timer)
+		attack_timer.start()
+		attack(spell_heal)
+
+func _on_attack_finished():
+	is_attacking = false
 func _on_changed() -> void:
 
-		is_leader = true
-		spring_arm = $SpringArm3D
-		$SpringArm3D/Camera3D.make_current()
-		ray_cast = get_node("SpringArm3D/Camera3D/RayCast3D")
+	is_leader = true
+	spring_arm = $SpringArm3D
+	$SpringArm3D/Camera3D.make_current()
+	ray_cast = get_node("SpringArm3D/Camera3D/RayCast3D")
 		
 
 
@@ -368,4 +429,60 @@ func _on_health_died() -> void:
 func _on_death_timer_finished() -> void:
 	died.emit(self)
 	queue_free()
+	
+
+func find_nearest_mage_in_front(max_angle: float = 30.0) -> Node:
+	var nearest_mage = null
+	var nearest_distance = 20.0
+	
+	# Convert max_angle to radians for calculations
+	var max_angle_rad = deg_to_rad(max_angle)
+	print("maxanglerad",max_angle_rad)
+	# Calculate the player's forward direction using model.rotation
+	var forward_direction = Vector3(sin(model.rotation.y), 0, -cos(model.rotation.y)).normalized()
+	print("rotation",forward_direction)
+	# Loop through all nodes in the "mages" group
+	for mage in get_tree().get_nodes_in_group("enemy_mages"):
+		if not Invading_Mage or not is_instance_valid(mage) :
+			continue
+		
+		# Calculate the vector from the player to the mage
+		var to_mage = (global_position - mage.global_position).normalized()
+		to_mage.y = 0
+		# Calculate the angle between the player's forward direction and the direction to the mage
+		var angle_to_mage = acos(forward_direction.dot(to_mage))
+		print(to_mage)
+		print(angle_to_mage)
+		# Check if the mage is within the specified angle
+		if angle_to_mage <= max_angle_rad:
+			# Calculate the distance to the mage
+			var distance_to_mage = global_transform.origin.distance_to(mage.global_transform.origin)
+			
+			# Update the nearest mage if this one is closer
+			if distance_to_mage < nearest_distance:
+				nearest_mage = mage
+				nearest_distance = distance_to_mage
+	
+	return nearest_mage
+	
+
+func find_knight_closest_to(enemy_mage: Node) -> Node:
+	var closest_knight = null
+	var closest_distance = INF
+	
+	# Loop through all nodes in the "knights" group
+	for knight in get_tree().get_nodes_in_group("knights"):
+		if not is_instance_valid(knight) or knight.charging:
+			continue
+		
+		# Calculate the distance from the enemy mage to the knight
+		var distance = enemy_mage.global_transform.origin.distance_to(knight.global_transform.origin)
+		
+		# Update the closest knight if this one is closer
+		if distance < closest_distance:
+			closest_knight = knight
+			closest_distance = distance
+	
+	return closest_knight
+
 	

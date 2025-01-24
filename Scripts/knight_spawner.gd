@@ -7,6 +7,7 @@ class_name KnightSpawner
 
 var spawn_count: int = 0 # Tracks how many enemies have been spawned
 
+
 func _ready():
 	call_deferred("spawn_enemy")
 	var timer = Timer.new()

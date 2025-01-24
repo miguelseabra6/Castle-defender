@@ -12,3 +12,4 @@ script = ExtResource("1_3nosm")
 knight_scene = ExtResource("2_txelw")
 mage_scene = ExtResource("3_hmyxk")
 strong_knight_scene = ExtResource("4_xmvb8")
+spawn_time = 30

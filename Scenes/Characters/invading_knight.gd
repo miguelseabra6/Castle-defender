@@ -15,6 +15,11 @@ class_name Invading_Knight
 @export var attack_range = 2.0
 @onready var vulnerable = false
 @onready var helmet = get_node("Rig/Skeleton3D/Knight_Helmet/Knight_Helmet")
+@onready var body = get_node("Rig/Skeleton3D/Knight_Body")
+@onready var left_arm = get_node("Rig/Skeleton3D/Knight_ArmLeft")
+@onready var right_arm = get_node("Rig/Skeleton3D/Knight_ArmRight")
+@onready var left_leg = get_node("Rig/Skeleton3D/Knight_LegLeft")
+@onready var right_leg = get_node("Rig/Skeleton3D/Knight_LegRight")
 @onready var castle_script = get_parent().get_parent().get_node("castle")
 var is_attacking = false
 var target_player = null
@@ -24,12 +29,11 @@ var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 var attack_in_progress = false
 var target_door = null
 var target = null
-signal died(String)
+signal died()
 
 # List of attack animations
 var attacks = [
 	"1H_Melee_Attack_Slice_Diagonal",
-	"1h_melee_chop",
 	"1H_Melee_Attack_Slice_Horizontal",
 ]
 
@@ -43,7 +47,48 @@ func _ready():
 		material = StandardMaterial3D.new()
 		helmet.set_surface_override_material(0, material)
 	material.albedo_color = Color(1, 0, 0)
+	var body_material = body.get_surface_override_material(0)
+	if not body_material:
+		body_material = StandardMaterial3D.new()
+		body.set_surface_override_material(0, body_material)
+	body_material.albedo_color = Color(0.1, 0.1, 0.1)
+	
+	# Left Arm
+	var left_arm_material = left_arm.get_surface_override_material(0)
+	if not left_arm_material:
+		left_arm_material = StandardMaterial3D.new()
+		left_arm.set_surface_override_material(0, left_arm_material)
+	left_arm_material.albedo_color = Color(0.1, 0.1, 0.1)
 
+	# Right Arm
+	var right_arm_material = right_arm.get_surface_override_material(0)
+	if not right_arm_material:
+		right_arm_material = StandardMaterial3D.new()
+		right_arm.set_surface_override_material(0, right_arm_material)
+	right_arm_material.albedo_color = Color(0.1, 0.1, 0.1)
+
+	# Left Leg
+	var left_leg_material = left_leg.get_surface_override_material(0)
+	if not left_leg_material:
+		left_leg_material = StandardMaterial3D.new()
+		left_leg.set_surface_override_material(0, left_leg_material)
+	left_leg_material.albedo_color = Color(0.1, 0.1, 0.1)
+
+	# Right Leg
+	var right_leg_material = right_leg.get_surface_override_material(0)
+	if not right_leg_material:
+		right_leg_material = StandardMaterial3D.new()
+		right_leg.set_surface_override_material(0, right_leg_material)
+	right_leg_material.albedo_color = Color(0.1, 0.1, 0.1)
+	
+
+func _process(delta):
+	# Check if the character's z position has crossed the threshold
+	if global_position.z < 65:
+		# Add Layer 6
+		set_collision_layer(get_collision_layer() | (1 << 5))
+		set_collision_mask(get_collision_mask() | (1 << 5))
+		
 func _physics_process(delta):
 	# Apply gravity
 	velocity.y += -gravity * delta
@@ -76,65 +121,72 @@ func _physics_process(delta):
 @onready var raycast = $RayCast3D
 var attacking_wall = false
 var avoiding = false  # Track if the knight is currently avoiding
+var wave_number = null
+
+
 
 func move_straight(delta):
-	# Check if attacking
-	if attack_in_progress:
-		velocity.x = 0
-		velocity.z = 0
-		var vl = velocity * model.transform.basis
-		anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
-		return
-
-	# If avoiding, maintain the sideways movement
-	if avoiding:
-		velocity.z = 0  # Stop forward movement
-	else:
-		velocity.z = -speed  # Move forward
-
-	# Check for obstacles using RayCast3D
-	if raycast.is_colliding() and not avoiding:
-		var collider = raycast.get_collider()
-		if collider.is_in_group("enemy_knights"):  # Detect other enemies
-			# Start avoidance
-			avoiding = true
-			velocity.x = speed  # Move to the side
-			var timer = Timer.new()
-			timer.wait_time = 3.0
-			timer.one_shot = true
-			timer.connect("timeout", _on_avoid_timer_finished)
-			add_child(timer)
-			timer.start()
-
-	# Update animation for movement
-	var vl = velocity * model.transform.basis
-	anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
-	
-	# Rotate model to face forward
-	if not avoiding:
+	if global_position.z > 7:
+		velocity.z = -speed
 		var target_rotation_y = atan2(0, -1)
 		model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, delta * 10.0)
-		
+	else:
+		# Check if attacking
+		if attack_in_progress:
+			velocity.x = 0
+			velocity.z = 0
+			return
 
-	# Check for collision with a wall
-	if is_on_wall() and not avoiding:
-		velocity.z = 0
-		vl = velocity * model.transform.basis
+		# If avoiding, maintain the sideways movement
+		if avoiding:
+			velocity.z = 0  # Stop forward movement
+		else:
+			velocity.z = -speed  # Move forward
+
+		# Check for obstacles using RayCast3D
+		if raycast.is_colliding() and not avoiding:
+			var collider = raycast.get_collider()
+			if collider.is_in_group("enemy_knights"):  # Detect other enemies
+				# Start avoidance
+				avoiding = true
+				velocity.x = speed  # Move to the side
+				var timer = Timer.new()
+				timer.wait_time = 3.0
+				timer.one_shot = true
+				timer.connect("timeout", _on_avoid_timer_finished)
+				add_child(timer)
+				timer.start()
+
+		# Update animation for movement
+		var vl = velocity * model.transform.basis
 		anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
-		if not attack_in_progress:
-			attack_wall()
+		
+		# Rotate model to face forward
+		if not avoiding:
+			var target_rotation_y = atan2(0, -1)
+			model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, delta * 10.0)
+			
+
+		# Check for collision with a wall
+		if is_on_wall() and not avoiding:
+			velocity.z = 0
+	
+			if not attack_in_progress:
+				attack_wall()
+	var vl = velocity * model.transform.basis
+	anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
 
 
 func rotate_model_towards_direction(direction: Vector3, delta: float):
 	if direction != Vector3.ZERO:
-		var target_rotation_y = atan2(direction.x, direction.z)
+		var target_rotation_y = atan2(direction.x, direction.z) - 0.1
 		model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, delta * 10.0)
 
 func _on_avoid_timer_finished():
 	# Stop avoiding
 	avoiding = false
 	velocity.x = 0  # Stop sideways movement
-func avoid_obstacle(delta):
+func avoid_obstacle(_delta):
 	# Adjust velocity to move around the obstacle
 	# Choose a side to move toward, e.g., left or right
 	var side_step = global_transform.basis.x * (speed * 0.5)  # Step sideways
@@ -240,26 +292,30 @@ func idle_wander(delta):
 	anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
 
 func move_towards_player(delta):
-
 	var player_pos = target_player.global_transform.origin
 	var direction_to_player = (player_pos - global_transform.origin).normalized()
 	var distance_to_player = global_transform.origin.distance_to(player_pos)
 	target = target_player
-	if distance_to_player > attack_range:
-		velocity.x = direction_to_player.x * speed
-		velocity.z = direction_to_player.z * speed
 
+	if distance_to_player > attack_range:
+		# Smoothly adjust velocity to prevent abrupt changes
+		velocity.x = lerp(velocity.x, direction_to_player.x * speed, delta * 5.0)
+		velocity.z = lerp(velocity.z, direction_to_player.z * speed, delta * 5.0)
+		
+		# Smoothly rotate towards the player
 		var target_rotation_y = atan2(direction_to_player.x, direction_to_player.z)
 		model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, delta * 10.0)
-
+		
+		# Update animation blending
 		var vl = velocity * model.transform.basis
 		anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
 	else:
-		# Stop and attack if within attack range
-		velocity.x = 0
-		velocity.z = 0
+		# Stop moving and attack if within attack range
+		velocity.x = lerp(velocity.x, 0.0, delta * 10.0)
+		velocity.z = lerp(velocity.z, 0.0, delta * 10.0)
 		var vl = velocity * model.transform.basis
 		anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
+		
 		if not attack_in_progress:
 			attack()
 
@@ -349,7 +405,7 @@ func _on_health_died() -> void:
 
 func _on_death_timer_finished() -> void:
 	queue_free()
-	died.emit("Knight")
+	died.emit()
 
 func _on_sword_area_entered(body: Area3D) -> void:
 	if attack_in_progress:

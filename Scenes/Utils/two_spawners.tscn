@@ -1,0 +1,20 @@
+[gd_scene load_steps=4 format=3 uid="uid://dojnqr8nvr6j5"]
+
+[ext_resource type="Script" path="res://Scripts/two_spawners.gd" id="1_hqhnf"]
+[ext_resource type="PackedScene" uid="uid://cx5e2xphtncrg" path="res://Scenes/Utils/spawner.tscn" id="2_i34kq"]
+[ext_resource type="PackedScene" uid="uid://cnw2s4w243615" path="res://Scenes/Utils/spawner2.tscn" id="3_38ctg"]
+
+[node name="Node3D" type="Node3D"]
+script = ExtResource("1_hqhnf")
+
+[node name="Node3D" parent="." instance=ExtResource("2_i34kq")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 0, 0)
+
+[node name="Node3D2" parent="." instance=ExtResource("3_38ctg")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 0, 0)
+
+[connection signal="wave_cleared" from="Node3D/Marker3D" to="." method="_on_spawner_wave_cleared"]
+[connection signal="wave_cleared" from="Node3D2/Marker3D" to="." method="_on_spawner_wave_cleared"]
+
+[editable path="Node3D"]
+[editable path="Node3D2"]

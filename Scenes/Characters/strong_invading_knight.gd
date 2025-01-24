@@ -49,16 +49,17 @@ func _ready():
 		material = StandardMaterial3D.new()
 		helmet.set_surface_override_material(0, material)
 	material.albedo_color = Color(0.1, 0.1, 0.1)
-	var body_material = body.get_surface_override_material(0)
-	if not body_material:
-		body_material = StandardMaterial3D.new()
-		body.set_surface_override_material(0, body_material)
-	body_material.albedo_color = Color(0.1, 0.1, 0.1)
 	var sword_material = sword.get_surface_override_material(0)
 	if not sword_material:
 		sword_material = StandardMaterial3D.new()
 		sword.set_surface_override_material(0, sword_material)
 	sword_material.albedo_color = Color(0.1, 0.1, 0.1)
+	var body_material = body.get_surface_override_material(0)
+	if not body_material:
+		body_material = StandardMaterial3D.new()
+		body.set_surface_override_material(0, body_material)
+	body_material.albedo_color = Color(0.1, 0.1, 0.1)
+	
 	# Left Arm
 	var left_arm_material = left_arm.get_surface_override_material(0)
 	if not left_arm_material:
@@ -127,8 +128,7 @@ func move_straight(delta):
 	if attack_in_progress:
 		velocity.x = 0
 		velocity.z = 0
-		var vl = velocity * model.transform.basis
-		anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
+
 		return
 
 	# If avoiding, maintain the sideways movement
@@ -179,7 +179,7 @@ func _on_avoid_timer_finished():
 	# Stop avoiding
 	avoiding = false
 	velocity.x = 0  # Stop sideways movement
-func avoid_obstacle(delta):
+func avoid_obstacle(_delta):
 	# Adjust velocity to move around the obstacle
 	# Choose a side to move toward, e.g., left or right
 	var side_step = global_transform.basis.x * (speed * 0.5)  # Step sideways
@@ -395,7 +395,7 @@ func _on_health_died() -> void:
 
 func _on_death_timer_finished() -> void:
 	queue_free()
-	died.emit("Knight")
+	died.emit()
 
 func _on_sword_area_entered(body: Area3D) -> void:
 	if attack_in_progress:
