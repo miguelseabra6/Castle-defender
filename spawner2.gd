@@ -4,8 +4,8 @@ class_name Spawner2
 @export var knight_scene: PackedScene
 @export var mage_scene: PackedScene
 @export var strong_knight_scene: PackedScene
-@export var spawn_time: int = 30  # Time between subsequent waves in seconds
-@export var first_wave_delay: int = 15  # Delay before the first wave
+@export var spawn_time: int = 40  # Time between subsequent waves in seconds
+@export var first_wave_delay: int = 20  # Delay before the first wave
 @export var spawn_offset: float = 2.0  # Distance between spawned enemies
 signal wave_cleared(int)
 
@@ -15,7 +15,7 @@ var wave_config = [
 	{"knights": 3, "mages": 0, "strong_knights": 0},
 	{"knights": 3, "mages": 0, "strong_knights": 0},
 	{"knights": 3, "mages": 1, "strong_knights": 0},
-	{"knights": 3, "mages": 1, "strong_knights": 1}
+	{"knights": 3, "mages": 0, "strong_knights": 1}
 ]
 
 var current_wave: int = 1

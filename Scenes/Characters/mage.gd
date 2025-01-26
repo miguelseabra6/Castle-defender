@@ -36,7 +36,7 @@ var self_index = self.get_index()
 
 @export var max_mana: int = 100  # The maximum mana the mage can have
 var current_mana: int = max_mana  # The current mana the mage has
-@export var mana_regeneration_rate: float = 5.0  # Mana regenerated per second
+@export var mana_regeneration_rate: float = 1.0  # Mana regenerated per second
 
 func use_mana(amount: int) -> bool:
 	if current_mana >= amount:
@@ -46,11 +46,28 @@ func use_mana(amount: int) -> bool:
 		print("Not enough mana!")
 		return false  # Not enough mana
 
-func _process(delta):
-	# Update the mana bar
-	mana_bar.value = current_mana
-	mana_bar.max_value = max_mana
+func _on_mana_reward():
+	current_mana += 15  # Increase mana (adjust value as needed)
+
 	
+var accumulated_mana: float = 0.0  # Tracks fractional mana over time
+
+func _process(delta):
+	# Calculate the total mana to regenerate (fractional values included)
+	var mana_to_add = mana_regeneration_rate * delta
+
+	# Accumulate fractional mana
+	accumulated_mana += mana_to_add
+
+	# Apply only whole-number mana increments
+	if accumulated_mana >= 1.0:
+		current_mana += int(accumulated_mana)  # Add the whole-number part
+		accumulated_mana -= int(accumulated_mana)  # Keep the fractional remainder
+		current_mana = min(current_mana, max_mana)  # Clamp to max mana
+
+		# Update mana bar
+		mana_bar.value = current_mana
+		mana_bar.max_value = max_mana
 func _ready():
 	died.connect(get_parent()._on_character_died)
 	player_units = get_parent().get_children()
@@ -182,7 +199,7 @@ var spell_timer: float = 0.0  # Timer to track cooldown
 func follow_leader(delta):
 	var knights = []
 	for child in get_parent().get_children():
-		if child is Knight:
+		if child is Knight and not child.stationary and not child.charging:
 			knights.append(child)
 
 
@@ -271,7 +288,7 @@ func shoot_at_nearest_enemy():
 func _physics_process(delta):
 	velocity.y += -gravity * delta
 	  # Regenerate mana
-	current_mana = min(current_mana + mana_regeneration_rate * delta, max_mana)
+
 	if is_leader:
 		# Standard control logic for the leader knight
 		
@@ -296,6 +313,7 @@ func attack(spell:PackedScene):
 		new_spell = spell_slow.instantiate()
 	elif spell == spell_vulnerable:
 		new_spell = spell_vulnerable.instantiate()
+		new_spell.caster = self  # Assign the mage as the caster
 	elif spell == spell_heal:
 		new_spell = spell_heal.instantiate()
 	get_tree().root.add_child(new_spell)
@@ -486,3 +504,13 @@ func find_knight_closest_to(enemy_mage: Node) -> Node:
 	return closest_knight
 
 	
+
+var targets: Array = []
+# When the tracked target dies
+func _on_target_died(target: Node) -> void:
+	print("hello")
+	if target in targets:
+		return
+	targets.append(target)
+	_on_mana_reward()  # Notify the mage to grant mana
+	print("Mana awarded to caster: ")

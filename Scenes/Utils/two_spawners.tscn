@@ -8,7 +8,10 @@
 script = ExtResource("1_hqhnf")
 
 [node name="Node3D" parent="." instance=ExtResource("2_i34kq")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, 0)
+
+[node name="Marker3D" parent="Node3D" index="0"]
+spawn_time = 40
 
 [node name="Node3D2" parent="." instance=ExtResource("3_38ctg")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 0, 0)

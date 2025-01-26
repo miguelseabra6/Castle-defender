@@ -124,50 +124,55 @@ var attacking_wall = false
 var avoiding = false  # Track if the knight is currently avoiding
 
 func move_straight(delta):
-	# Check if attacking
-	if attack_in_progress:
-		velocity.x = 0
-		velocity.z = 0
-
-		return
-
-	# If avoiding, maintain the sideways movement
-	if avoiding:
-		velocity.z = 0  # Stop forward movement
-	else:
-		velocity.z = -speed  # Move forward
-
-	# Check for obstacles using RayCast3D
-	if raycast.is_colliding() and not avoiding:
-		var collider = raycast.get_collider()
-		if collider.is_in_group("enemy_knights"):  # Detect other enemies
-			# Start avoidance
-			avoiding = true
-			velocity.x = speed  # Move to the side
-			var timer = Timer.new()
-			timer.wait_time = 3.0
-			timer.one_shot = true
-			timer.connect("timeout", _on_avoid_timer_finished)
-			add_child(timer)
-			timer.start()
-
-	# Update animation for movement
-	var vl = velocity * model.transform.basis
-	anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
-	
-	# Rotate model to face forward
-	if not avoiding:
+	if global_position.z > 7:
+		velocity.z = -speed
 		var target_rotation_y = atan2(0, -1)
 		model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, delta * 10.0)
-		
+	else:
+		# Check if attacking
+		if attack_in_progress:
+			velocity.x = 0
+			velocity.z = 0
+			return
 
-	# Check for collision with a wall
-	if is_on_wall() and not avoiding:
-		velocity.z = 0
-		vl = velocity * model.transform.basis
+		# If avoiding, maintain the sideways movement
+		if avoiding:
+			velocity.z = 0  # Stop forward movement
+		else:
+			velocity.z = -speed  # Move forward
+
+		# Check for obstacles using RayCast3D
+		if raycast.is_colliding() and not avoiding:
+			var collider = raycast.get_collider()
+			if collider.is_in_group("enemy_knights"):  # Detect other enemies
+				# Start avoidance
+				avoiding = true
+				velocity.x = speed  # Move to the side
+				var timer = Timer.new()
+				timer.wait_time = 3.0
+				timer.one_shot = true
+				timer.connect("timeout", _on_avoid_timer_finished)
+				add_child(timer)
+				timer.start()
+
+		# Update animation for movement
+		var vl = velocity * model.transform.basis
 		anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
-		if not attack_in_progress:
-			attack_wall()
+		
+		# Rotate model to face forward
+		if not avoiding:
+			var target_rotation_y = atan2(0, -1)
+			model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, delta * 10.0)
+			
+
+		# Check for collision with a wall
+		if is_on_wall() and not avoiding:
+			velocity.z = 0
+	
+			if not attack_in_progress:
+				attack_wall()
+	var vl = velocity * model.transform.basis
+	anim_tree.set("parameters/IWR/blend_position", Vector2(-vl.x, -vl.z) / speed)
 
 
 func rotate_model_towards_direction(direction: Vector3, delta: float):

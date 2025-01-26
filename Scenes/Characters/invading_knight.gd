@@ -404,8 +404,8 @@ func _on_health_died() -> void:
 	state_machine.travel("Death_A")
 
 func _on_death_timer_finished() -> void:
-	queue_free()
 	died.emit()
+	queue_free()
 
 func _on_sword_area_entered(body: Area3D) -> void:
 	if attack_in_progress:

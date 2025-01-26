@@ -246,7 +246,7 @@ func follow_leader(delta):
 		# Filter only knights from the parent's children
 		var knights = []
 		for child in get_parent().get_children():
-			if child is Knight:
+			if child is Knight and not child.stationary and not child.charging:
 				knights.append(child)
 
 		var knight_count = knights.size()
@@ -496,7 +496,7 @@ func _on_death_timer_finished() -> void:
 	died.emit(self)
 	queue_free()
 
-@export var charge_duration_limit = 30.0  # Max duration for charging (in seconds)
+@export var charge_duration_limit = 10.0  # Max duration for charging (in seconds)
 var charging = false
 var charge_timer: Timer = null
 

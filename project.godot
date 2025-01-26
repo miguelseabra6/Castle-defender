@@ -11,13 +11,19 @@ config_version=5
 [application]
 
 config/name="Jogo"
-run/main_scene="res://Scenes/Levels/map_2.tscn"
+run/main_scene="res://Scenes/UI/menu.tscn"
 config/features=PackedStringArray("4.3", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
 SceneHandler="*res://Scripts/scene_handler.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/mode=2
 
 [editor_plugins]
 
