@@ -394,7 +394,7 @@ func _on_slow_timer_finished():
 	
 	
 func _on_health_died() -> void:
-	print("dying")
+
 	var timer = Timer.new()
 	timer.wait_time = 0.8
 	timer.one_shot = true
@@ -412,9 +412,7 @@ func _on_sword_area_entered(body: Area3D) -> void:
 		return
 
 	attack_in_progress = true
-	if (avoiding == true):
-		if body.is_in_group("target_points"):
-			print("attacked castle")
+
 		
 	if body.is_in_group("player_hurt_boxes"):
 		var player = body.get_parent()
@@ -432,7 +430,6 @@ func _on_sword_area_entered(body: Area3D) -> void:
 		if player.is_blocking and dot_product > 0.5:
 			print("Player blocked the attack!")
 		else:
-			print("Player hit!")
 			player._on_hurt(5)
 
 

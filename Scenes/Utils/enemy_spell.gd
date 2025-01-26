@@ -8,9 +8,7 @@ func _process(delta):
 		global_position += direction * speed * delta
 		
 func _on_body_entered(body: Node) -> void:
-	print(body)
-	print(body.is_in_group("player_hurt_boxes"))
-	print(body.is_in_group("Knights"))
+	
 	#if body.is_in_group("player_hurt_boxes"):
 	body._on_hurt(3)
 	#if body.is_in_group("knights"):

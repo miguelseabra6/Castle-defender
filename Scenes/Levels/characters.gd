@@ -16,7 +16,7 @@ func _ready() -> void:
 		set_leader(chars[0])
 	else:
 		leader = null
-		print("No knights remaining.")
+
 
 # Set a new leader knight
 func set_leader(new_leader):
@@ -38,8 +38,6 @@ func set_leader(new_leader):
 		if child != leader and is_instance_valid(child):
 			child._on_changed_other()
 
-	print("New leader is:", leader.name)
-
 # Get all alive knights
 func get_chars() -> Array:
 	return get_children().filter(func(char):
@@ -53,19 +51,19 @@ func get_all_chars() -> Array:
 # Handle leader change input
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("change"):
-		print("Leader change requested.")
+	
 		change_leader()
 	elif event.is_action_pressed("change_mage"):
-		print("Changing leader to a Mage...")
+
 		change_leader_to(Mage)
 	elif event.is_action_pressed("change_knight"):
-		print("Changing leader to a Knight...")
+
 		change_leader_to(Knight)
 	elif event.is_action_pressed("stationary"):
-		print("Leader change requested.")
+	
 		change_leader()
 	elif event.is_action_pressed("regroup"):
-		print("Regrouping characters...")
+
 		regroup_characters()
 
 func regroup_characters() -> void:
@@ -88,7 +86,7 @@ func change_leader_to(target_type):
 		)
 
 	if chars.size() == 0:
-		print("No characters of type", target_type, "available.")
+
 		return
 
 	var current_index = chars.find(leader)
@@ -101,7 +99,7 @@ func change_leader_to(target_type):
 # Change to the next sin the list
 func change_leader():
 	var chars = get_chars()
-	print(chars.size())
+
 	var all_chars = get_all_chars()
 	if all_chars.size() <= 1:
 		return  # Do nothing if only one knight remains
@@ -125,7 +123,7 @@ func change_leader():
 
 # Handle knight death
 func _on_character_died(character):
-	print("Someone died.", character)
+
 	if character == leader:
 		update_leader()
 	if get_chars().size() <= 0:
@@ -148,13 +146,13 @@ func update_leader():
 		set_leader(chars[next_index])
 	else:
 		leader = null
-		print("No knights remaining.")
+	
 
 # Handle enemy death and spawn characters accordingly
 func _on_enemy_died() -> void:
 	enemy_kill_count += 1
 
-	print("Enemy killed! Total kills:", enemy_kill_count)
+
 
 	if enemy_kill_count % 10 == 0:
 		spawn_mage()
@@ -168,7 +166,6 @@ func _on_wave_cleared(wave: int):
 # Spawn a knight
 func spawn_knight():
 	if knight_scene:
-		print("Spawning knight...")
 		var new_knight = knight_scene.instantiate()
 		add_child(new_knight)
 		# Position the knight near the leader
@@ -177,13 +174,11 @@ func spawn_knight():
 		
 
 		leader.get_node("SpringArm3D").get_node("Camera3D").make_current()
-	else:
-		print("Knight scene not assigned!")
-
+	
 # Spawn a mage
 func spawn_mage():
 	if mage_scene:
-		print("Spawning mage...")
+
 		var new_mage = mage_scene.instantiate()
 		add_child(new_mage)
 		# Position the mage near the leader
@@ -192,5 +187,3 @@ func spawn_mage():
 		
 
 		leader.get_node("SpringArm3D").get_node("Camera3D").make_current()
-	else:
-		print("Mage scene not assigned!")

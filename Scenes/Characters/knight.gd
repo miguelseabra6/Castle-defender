@@ -95,22 +95,7 @@ func _unhandled_input(event):
 			spring_arm.rotation_degrees.x = clamp(spring_arm.rotation_degrees.x, -90.0, 30.0)
 			spring_arm.rotation.y -= event.relative.x * mouse_sensitivity
 		
-		#if event.is_action_pressed("attack"):
-			#print("attack")
-			#attack_enemy()
-	#if event.is_action_pressed("block"):
-#
-		#if not is_blocking:
-			## Start blocking (Play the 'Block' animation once)
-			#state_machine.travel(block_animation)
-			#is_blocking = true
-			## After the block animation ends, transition to the "Blocking" state (looping)
-			#state_machine.travel(blocking_animation)
-	#else:
-		#if is_blocking:
-			## Stop blocking (play the reverse block animation or transition to idle)
-			#state_machine.travel(reverse_block_animation)  # Or transition to idle
-			#is_blocking = false
+	
 func _input(_delta):
 	if is_leader:
 		if Input.is_action_pressed("attack"):
@@ -414,11 +399,8 @@ func _on_sword_area_entered(body : Area3D) -> void:
 	if attack_in_progress:
 		return
 	attack_in_progress = true
-	print(body)
-	if body.is_in_group("target_points"):
-		print("attacked castle")
 	if body.is_in_group("hurt_boxes"):
-		print("hurting")
+	
 		body.get_parent()._on_hurt(5)
 		
 var target_enemy = null
@@ -482,7 +464,7 @@ func attack_enemy():
 signal died(character)
 func _on_health_died() -> void:
 
-	print("dying")
+
 	var timer = Timer.new()
 	timer.wait_time = 0.8  # Set to the duration of the Death_A animation
 	timer.one_shot = true
@@ -500,61 +482,6 @@ func _on_death_timer_finished() -> void:
 var charging = false
 var charge_timer: Timer = null
 
-#func _on_charge(enemy_mage: Node) -> void:
-	#if charging:
-		#print("Already charging!")
-		#return
-#
-	#if not is_instance_valid(enemy_mage):
-		#print("Invalid enemy mage passed to _on_charge.")
-		#return
-#
-	#charging = true
-	#target_enemy = enemy_mage
-#
-	#print("Charging at: ", enemy_mage.name)
-#
-	## Set up the charge duration timer
-	#if not charge_timer:
-		#charge_timer = Timer.new()
-		#charge_timer.one_shot = true
-		#charge_timer.connect("timeout", _on_charge_timeout)
-		#add_child(charge_timer)
-	#charge_timer.wait_time = charge_duration_limit
-	#charge_timer.start()
-	#print("Charging at:2 ", enemy_mage.name)
-	## Charge toward the enemy mage
-	#var charge_speed = speed * 2.0  # Adjust the charge multiplier if needed
-#
-	#while charging:
-		## If the enemy mage is no longer valid, stop charging
-		#if not is_instance_valid(enemy_mage):
-			#print("Enemy mage is no longer valid. Stopping charge.")
-			#break
-		#print("Charging at:3 ", enemy_mage.name)
-		## Calculate the distance to the mage
-		#var distance_to_mage = global_transform.origin.distance_to(enemy_mage.global_transform.origin)
-#
-		## Stop charging if within attack range
-		#if distance_to_mage <= attack_range:
-			#velocity = Vector3(0, velocity.y, 0)  # Stop horizontal movement
-			#attack_enemy()  # Perform the attack
-			#break
-		#print("Charging at:4 ", enemy_mage.name)
-		## Update velocity for charging
-		#var direction_to_mage = (enemy_mage.global_transform.origin - global_transform.origin).normalized()
-		#velocity.x = direction_to_mage.x * charge_speed
-		#velocity.z = direction_to_mage.z * charge_speed
-		#print("Charging at:5 ", enemy_mage.name)
-		## Smoothly rotate toward the mage during the charge
-		#var target_rotation_y = atan2(direction_to_mage.x, direction_to_mage.z)
-		#model.rotation.y = lerp_angle(model.rotation.y, target_rotation_y, rotation_speed * get_physics_process_delta_time())
-#
-	   #
-#
-	## Stop charging
-	#_end_charge()
-
 func _on_charge(enemy_mage: Node) -> void:
 	target_enemy = enemy_mage
 	charging = true
@@ -569,7 +496,7 @@ func _on_charge(enemy_mage: Node) -> void:
 	
 # Called when the charge duration timer times out
 func _on_charge_timeout() -> void:
-	print("Charge timed out.")
+
 	charging = false
 	speed = speed / 1.5
 
@@ -579,4 +506,3 @@ func _end_charge() -> void:
 	velocity = Vector3.ZERO  # Stop all movement
 	if charge_timer and charge_timer.is_connected("timeout",_on_charge_timeout):
 		charge_timer.stop()
-	print("Charge ended.")

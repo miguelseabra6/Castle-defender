@@ -65,16 +65,16 @@ func spawn_wave():
 		
 		active_waves[current_wave] = enemies_in_wave
 		current_wave += 1
-		print(active_waves)
+	
 func _on_enemy_died(wave_id: int, enemy_type: String):
-	print("connected")
+
 	# Remove the enemy from its wave list
 	if wave_id in active_waves and enemy_type in active_waves[wave_id]:
 		active_waves[wave_id].erase(enemy_type)
 
 		# Check if the wave is cleared
 		if active_waves[wave_id].size() == 0:
-			print("Wave %d cleared!" % wave_id)
+		
 			active_waves.erase(wave_id)  # Remove cleared wave
 			wave_cleared.emit(wave_id)
 			

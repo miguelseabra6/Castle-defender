@@ -43,7 +43,7 @@ func use_mana(amount: int) -> bool:
 		current_mana -= amount
 		return true  # Mana successfully used
 	else:
-		print("Not enough mana!")
+	
 		return false  # Not enough mana
 
 func _on_mana_reward():
@@ -141,14 +141,8 @@ func _unhandled_input(event):
 				# If a knight is found, call its _on_charge method
 					if closest_knight:
 						closest_knight._on_charge(enemy)
-					else:
-						print("No knights found to handle charge.")
-				else:
-					print("Ray did not hit an enemy mage.")
-			else:
-				print("RayCast is not colliding.")
-						
-			
+				
+
 		
 
 
@@ -434,7 +428,7 @@ func _on_hurt(damage: int) -> void:
 signal died(character)
 func _on_health_died() -> void:
 
-	print("dying")
+
 	var timer = Timer.new()
 	timer.wait_time = 0.8  # Set to the duration of the Death_A animation
 	timer.one_shot = true
@@ -455,10 +449,10 @@ func find_nearest_mage_in_front(max_angle: float = 30.0) -> Node:
 	
 	# Convert max_angle to radians for calculations
 	var max_angle_rad = deg_to_rad(max_angle)
-	print("maxanglerad",max_angle_rad)
+
 	# Calculate the player's forward direction using model.rotation
 	var forward_direction = Vector3(sin(model.rotation.y), 0, -cos(model.rotation.y)).normalized()
-	print("rotation",forward_direction)
+
 	# Loop through all nodes in the "mages" group
 	for mage in get_tree().get_nodes_in_group("enemy_mages"):
 		if not Invading_Mage or not is_instance_valid(mage) :
@@ -469,8 +463,7 @@ func find_nearest_mage_in_front(max_angle: float = 30.0) -> Node:
 		to_mage.y = 0
 		# Calculate the angle between the player's forward direction and the direction to the mage
 		var angle_to_mage = acos(forward_direction.dot(to_mage))
-		print(to_mage)
-		print(angle_to_mage)
+	
 		# Check if the mage is within the specified angle
 		if angle_to_mage <= max_angle_rad:
 			# Calculate the distance to the mage
@@ -508,9 +501,8 @@ func find_knight_closest_to(enemy_mage: Node) -> Node:
 var targets: Array = []
 # When the tracked target dies
 func _on_target_died(target: Node) -> void:
-	print("hello")
+
 	if target in targets:
 		return
 	targets.append(target)
 	_on_mana_reward()  # Notify the mage to grant mana
-	print("Mana awarded to caster: ")

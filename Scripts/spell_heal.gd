@@ -8,7 +8,7 @@ func _process(delta):
 		global_position += direction * speed * delta
 		
 func _on_body_entered(body: Node) -> void:
-	print(body)
+
 	if body.is_in_group("knights"):
 		body._on_heal(37.5)
 		queue_free()

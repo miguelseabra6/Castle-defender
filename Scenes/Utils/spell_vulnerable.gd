@@ -27,7 +27,7 @@ func _on_body_entered(body: Node) -> void:
 func track_target(target: Node):
 	if not caster:
 		return  # If no caster is assigned, skip tracking
-	print("tracking")
+
 	# Listen for the "died" signal from the target
 	
 	var timer = Timer.new()
@@ -38,16 +38,16 @@ func track_target(target: Node):
 	timer.start()
 	
 	target.died.connect(self._on_target_died.bind(timer,target))  # Reward mana if the target dies
-	print(target.get_signal_connection_list("died"))
+
 
 # When the tracked target dies
 func _on_target_died(timer: Timer,target: Node) -> void:
-	print("targetdied")
+
 	if timer and is_instance_valid(timer):
 		timer.queue_free() 
 		if caster:
 			caster._on_target_died(target)  # Notify the mage to grant mana
-			print("Mana awarded to caster: ", caster.name)
+			
 
 
 # Clean up if the target doesn't die within the time limit
