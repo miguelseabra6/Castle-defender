@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://cew63vmlwwr0d"]
+[gd_scene load_steps=3 format=3 uid="uid://c72i7va4pku48"]
 
 [ext_resource type="Script" path="res://Scripts/knight_spawner.gd" id="1_v8841"]
 [ext_resource type="PackedScene" uid="uid://ci5qayd6dan3l" path="res://Scenes/Characters/invading_knight.tscn" id="2_cu2cd"]
